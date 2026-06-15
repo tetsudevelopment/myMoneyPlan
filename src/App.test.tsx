@@ -29,19 +29,20 @@ afterEach(() => {
 })
 
 describe('App (smoke)', () => {
-  it('monta y muestra el resumen con la deuda total', () => {
+  it('monta y muestra el resumen con el flujo del mes (sin deudas al frente)', () => {
     render(<App />)
-    expect(screen.getByText('DEUDA TOTAL RESTANTE')).toBeTruthy()
-    expect(screen.getByText('Próximo objetivo')).toBeTruthy()
+    expect(screen.getByText(/DISPONIBLE EN/)).toBeTruthy()
+    expect(screen.getByText('Ingresos vs gastos')).toBeTruthy()
     expect(screen.getByText('Invitado')).toBeTruthy()
   })
 
-  it('navega a Deudas y muestra el botón de intereses y el objetivo', () => {
+  it('navega a Deudas y muestra el total, el objetivo y agregar deuda', () => {
     render(<App />)
     fireEvent.click(screen.getAllByText('Deudas')[0])
+    // El hero de deuda con barra de progreso vive aquí ahora
+    expect(screen.getByText('DEUDA TOTAL RESTANTE')).toBeTruthy()
     expect(screen.getByText(/Aplicar intereses de/)).toBeTruthy()
     expect(screen.getByText('⚡ OBJETIVO ACTUAL')).toBeTruthy()
-    // Botón para agregar deuda (mejora 2)
     expect(screen.getByText('+ Agregar deuda')).toBeTruthy()
   })
 

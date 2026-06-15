@@ -2,8 +2,14 @@ import { useState } from 'react'
 import { DeudaCard } from '../components/DeudaCard'
 import { ModalDeuda } from '../components/ModalDeuda'
 import { mesActual, nombreMesActual } from '../lib/fechas'
-import { deudaObjetivo, deudasVivas } from '../lib/finanzas'
-import { fmtK } from '../lib/format'
+import {
+  deudaInicialTotal,
+  deudaObjetivo,
+  deudaTotalActual,
+  deudasVivas,
+  pctPagadoTotal,
+} from '../lib/finanzas'
+import { fmt, fmtK } from '../lib/format'
 import { useApp } from '../store/AppContext'
 import type { Deuda } from '../types'
 
@@ -30,8 +36,34 @@ export function Deudas({ onAbonar }: { onAbonar: (deudaId: string) => void }) {
     setModal(true)
   }
 
+  const totalRestante = deudaTotalActual(estado.deudas)
+  const totalInicial = deudaInicialTotal(estado.deudas)
+  const pctTotal = pctPagadoTotal(estado.deudas)
+
   return (
     <>
+      {estado.deudas.length > 0 && (
+        <section className="mb-4 rounded-hero bg-gradient-to-br from-verde-prof to-verde-medio p-[22px] text-crema shadow-suave-lg lg:p-7">
+          <p className="text-xs font-medium tracking-wide opacity-70">DEUDA TOTAL RESTANTE</p>
+          <p className="my-1 text-[32px] font-bold leading-none tracking-tight lg:text-[40px]">
+            {fmt(totalRestante)}
+          </p>
+          <p className="text-[12.5px] opacity-65">de {fmt(totalInicial)} inicial</p>
+          <div className="mt-4 h-[7px] overflow-hidden rounded-full bg-white/20">
+            <div
+              className="h-full rounded-full bg-verde-vivo transition-all duration-700"
+              style={{ width: `${pctTotal}%` }}
+            />
+          </div>
+          <div className="mt-2 flex justify-between text-[11px] opacity-70">
+            <span>{pctTotal}% pagado</span>
+            <span>
+              {vivas.length} {vivas.length === 1 ? 'deuda activa' : 'deudas activas'}
+            </span>
+          </div>
+        </section>
+      )}
+
       <section className="mb-4 grid grid-cols-2 gap-2.5 sm:max-w-md">
         <Mini label="Deudas activas" valor={String(vivas.length)} />
         <Mini label="Cuota mensual" valor={fmtK(cuotaTotal)} />

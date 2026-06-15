@@ -67,7 +67,7 @@ function Shell() {
 
         <main className="px-4 pb-6 pt-[18px] lg:px-8 lg:pb-12 lg:pt-8">
           <div className="lg:mx-auto lg:max-w-5xl">
-            {vista === 'resumen' && <Inicio onAbonar={abrirAbono} />}
+            {vista === 'resumen' && <Inicio />}
             {vista === 'deudas' && <Deudas onAbonar={abrirAbono} />}
             {vista === 'gastos' && <Gastos />}
             {vista === 'plan' && <Plan />}

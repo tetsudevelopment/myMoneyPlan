@@ -7,6 +7,7 @@ import {
   deudaTotalActual,
   deudasVivas,
   detectarHormiga,
+  flujoMensual,
   gastosPorCategoria,
   generarPlan,
   interesDelMes,
@@ -109,6 +110,27 @@ describe('stats y gastos del mes', () => {
       { cat: 'mercado', total: 1000 },
       { cat: 'comida', total: 200 },
     ])
+  })
+})
+
+describe('flujo mensual', () => {
+  const movs = [
+    mov({ tipo: 'ingreso', monto: 5000, fecha: '2026-06-01' }),
+    mov({ tipo: 'gasto', monto: 1200, fecha: '2026-06-02' }),
+    mov({ tipo: 'gasto', monto: 800, fecha: '2026-05-10' }),
+    mov({ tipo: 'ingreso', monto: 4000, fecha: '2026-05-03' }),
+    mov({ tipo: 'abono', monto: 999, fecha: '2026-06-05' }), // no cuenta en flujo
+  ]
+  it('devuelve un punto por cada mes pedido, terminando en el actual', () => {
+    const serie = flujoMensual(movs, '2026-06', 6)
+    expect(serie).toHaveLength(6)
+    expect(serie[serie.length - 1].mes).toBe('2026-06')
+    expect(serie[serie.length - 2].mes).toBe('2026-05')
+  })
+  it('suma ingresos y gastos por mes (ignora abonos)', () => {
+    const serie = flujoMensual(movs, '2026-06', 2)
+    expect(serie[1]).toEqual({ mes: '2026-06', ingresos: 5000, gastos: 1200 })
+    expect(serie[0]).toEqual({ mes: '2026-05', ingresos: 4000, gastos: 800 })
   })
 })
 

@@ -1,90 +1,54 @@
+import { GraficoFlujo } from '../components/GraficoFlujo'
 import { InstallBanner } from '../components/InstallBanner'
-import { mesActual } from '../lib/fechas'
-import {
-  deudaInicialTotal,
-  deudaObjetivo,
-  deudaTotalActual,
-  pctPagadoDeuda,
-  pctPagadoTotal,
-  statsDelMes,
-} from '../lib/finanzas'
+import { mesActual, nombreMesActual } from '../lib/fechas'
+import { flujoMensual, statsDelMes } from '../lib/finanzas'
 import { fmt } from '../lib/format'
 import { useApp } from '../store/AppContext'
 
-export function Inicio({ onAbonar }: { onAbonar: (deudaId: string) => void }) {
+export function Inicio() {
   const { estado } = useApp()
-  const total = deudaTotalActual(estado.deudas)
-  const inicial = deudaInicialTotal(estado.deudas)
-  const pct = pctPagadoTotal(estado.deudas)
   const stats = statsDelMes(estado.movimientos, mesActual())
-  const objetivo = deudaObjetivo(estado.deudas)
+  const serie = flujoMensual(estado.movimientos, mesActual(), 6)
+  const mes = nombreMesActual()
+  const positivo = stats.disponible >= 0
 
   return (
     <div className="lg:grid lg:grid-cols-[1.6fr_1fr] lg:items-start lg:gap-5">
-      {/* Columna izquierda: hero + stats */}
+      {/* Columna izquierda: balance + gráfico */}
       <div className="lg:space-y-4">
         <InstallBanner />
 
-        {/* Hero deuda */}
+        {/* Balance del mes */}
         <section className="mb-4 rounded-hero bg-gradient-to-br from-verde-prof to-verde-medio p-[22px] text-crema shadow-suave-lg lg:mb-0 lg:p-7">
-          <p className="text-xs font-medium tracking-wide opacity-70">DEUDA TOTAL RESTANTE</p>
-          <p className="my-1 text-[32px] font-bold leading-none tracking-tight lg:text-[40px]">
-            {fmt(total)}
+          <p className="text-xs font-medium tracking-wide opacity-70">
+            DISPONIBLE EN {mes.toUpperCase()}
           </p>
-          <p className="text-[12.5px] opacity-65">de {fmt(inicial)} inicial</p>
-          <div className="mt-4 h-[7px] overflow-hidden rounded-full bg-white/20">
-            <div className="h-full rounded-full bg-verde-vivo transition-all duration-700" style={{ width: `${pct}%` }} />
-          </div>
-          <div className="mt-2 flex justify-between text-[11px] opacity-70">
-            <span>{pct}% pagado</span>
-            <span>Meta: 14 meses</span>
-          </div>
+          <p className="my-1 text-[32px] font-bold leading-none tracking-tight lg:text-[40px]">
+            {fmt(stats.disponible)}
+          </p>
+          <p className="text-[12.5px] opacity-65">
+            {positivo
+              ? 'Te queda margen este mes 👏'
+              : 'Cuidado: gastaste más de lo que ingresó 🫣'}
+          </p>
         </section>
 
-        {/* Mini stats: 2 en móvil, 4 en tablet+ */}
-        <section className="mb-4 grid grid-cols-2 gap-2.5 md:grid-cols-4 lg:mb-0">
-          <Mini label="Pagado este mes" valor={fmt(stats.pagado)} tono="verde" />
-          <Mini label="Gastos del mes" valor={fmt(stats.gastado)} tono="rojo" />
-          <Mini label="Ingresos del mes" valor={fmt(stats.ingresado)} />
-          <Mini label="Disponible" valor={fmt(stats.disponible)} />
+        {/* Gráfico ingresos vs gastos */}
+        <section className="mb-4 rounded-card bg-white p-[18px] shadow-suave lg:mb-0">
+          <h2 className="mb-1 text-[13px] font-semibold uppercase tracking-wide text-gris">
+            Ingresos vs gastos
+          </h2>
+          <p className="mb-3 text-[11.5px] text-gris-claro">Últimos 6 meses</p>
+          <GraficoFlujo datos={serie} />
         </section>
       </div>
 
-      {/* Próximo objetivo (columna derecha en desktop) */}
-      <section className="rounded-card bg-white p-[18px] shadow-suave lg:sticky lg:top-6">
-        <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-wide text-gris">
-          Próximo objetivo
-        </h2>
-        {objetivo ? (
-          <>
-            <div className="mb-2 flex items-center justify-between">
-              <div>
-                <div className="text-base font-bold">{objetivo.nombre}</div>
-                <div className="text-xs text-gris">
-                  Tasa {objetivo.tasaEA}% E.A. · Cuota {fmt(objetivo.cuota)}
-                </div>
-              </div>
-              <div className="text-xl font-bold">{fmt(objetivo.saldo)}</div>
-            </div>
-            <div className="h-[5px] overflow-hidden rounded-full bg-linea">
-              <div
-                className="h-full rounded-full bg-verde-vivo"
-                style={{ width: `${pctPagadoDeuda(objetivo)}%` }}
-              />
-            </div>
-            <button
-              onClick={() => onAbonar(objetivo.id)}
-              className="mt-3 w-full rounded-[11px] bg-verde-claro py-2.5 text-[13px] font-semibold text-verde-medio transition active:scale-[.98]"
-            >
-              Registrar abono a esta deuda
-            </button>
-          </>
-        ) : (
-          <div className="py-8 text-center text-gris-claro">
-            <div className="mb-2 text-4xl">🎉</div>
-            <div className="text-[13px]">¡Felicitaciones! No tienes deudas activas.</div>
-          </div>
-        )}
+      {/* Columna derecha: detalle del mes */}
+      <section className="grid grid-cols-2 gap-2.5 lg:grid-cols-1">
+        <Mini label={`Ingresos · ${mes}`} valor={fmt(stats.ingresado)} tono="verde" />
+        <Mini label={`Gastos · ${mes}`} valor={fmt(stats.gastado)} tono="rojo" />
+        <Mini label="Abonado a deudas" valor={fmt(stats.pagado)} />
+        <Mini label="Disponible" valor={fmt(stats.disponible)} tono={positivo ? 'verde' : 'rojo'} />
       </section>
     </div>
   )

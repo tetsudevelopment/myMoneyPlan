@@ -96,6 +96,36 @@ export function gastosPorCategoria(movimientos: Movimiento[], mes: string): Gast
     .sort((a, b) => b.total - a.total)
 }
 
+export interface FlujoMes {
+  /** 'YYYY-MM' */
+  mes: string
+  ingresos: number
+  gastos: number
+}
+
+/**
+ * Ingresos y gastos por mes para los últimos `nMeses` (incluido el actual).
+ * `mesActualStr` es 'YYYY-MM'. Pura: deriva los meses por aritmética de fecha.
+ */
+export function flujoMensual(
+  movimientos: Movimiento[],
+  mesActualStr: string,
+  nMeses = 6,
+): FlujoMes[] {
+  const [anio, mes] = mesActualStr.split('-').map(Number)
+  const meses: string[] = []
+  for (let i = nMeses - 1; i >= 0; i--) {
+    const d = new Date(anio, mes - 1 - i, 1)
+    meses.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
+  }
+  return meses.map((ym) => {
+    const delMes = movimientos.filter((m) => m.fecha.startsWith(ym))
+    const ingresos = delMes.filter((m) => m.tipo === 'ingreso').reduce((s, m) => s + m.monto, 0)
+    const gastos = delMes.filter((m) => m.tipo === 'gasto').reduce((s, m) => s + m.monto, 0)
+    return { mes: ym, ingresos, gastos }
+  })
+}
+
 export interface AlertaHormiga {
   activa: boolean
   total: number
