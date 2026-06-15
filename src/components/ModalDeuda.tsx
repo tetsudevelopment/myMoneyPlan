@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useApp } from '../store/AppContext'
 import type { Deuda, TipoDeuda } from '../types'
+import { MoneyInput } from './MoneyInput'
 
 interface Props {
   abierto: boolean
@@ -114,7 +115,7 @@ export function ModalDeuda({ abierto, onCerrar, deudaEditar, ordenSugerido = 1 }
         </Campo>
 
         <Campo label={editando ? 'Saldo actual' : 'Saldo que debes hoy'}>
-          <Input value={saldo} onChange={setSaldo} placeholder="0" type="number" inputMode="numeric" />
+          <MoneyInput value={saldo} onChange={setSaldo} />
         </Campo>
 
         <div className="grid grid-cols-2 gap-3">
@@ -122,7 +123,7 @@ export function ModalDeuda({ abierto, onCerrar, deudaEditar, ordenSugerido = 1 }
             <Input value={tasaEA} onChange={setTasaEA} placeholder="24.33" type="number" inputMode="decimal" />
           </Campo>
           <Campo label="Cuota mensual">
-            <Input value={cuota} onChange={setCuota} placeholder="0" type="number" inputMode="numeric" />
+            <MoneyInput value={cuota} onChange={setCuota} />
           </Campo>
         </div>
 

@@ -4,6 +4,7 @@ import { deudasVivas } from '../lib/finanzas'
 import { fmt } from '../lib/format'
 import { useApp } from '../store/AppContext'
 import type { Movimiento, TipoMovimiento } from '../types'
+import { MoneyInput } from './MoneyInput'
 
 interface Props {
   abierto: boolean
@@ -121,15 +122,7 @@ export function ModalRegistro({ abierto, onCerrar, abonoDeudaId, movEditar }: Pr
         )}
 
         <Campo label="Monto">
-          <input
-            type="number"
-            inputMode="numeric"
-            placeholder="0"
-            value={monto}
-            onChange={(e) => setMonto(e.target.value)}
-            autoFocus
-            className="w-full rounded-xl border-[1.5px] border-linea bg-white px-3.5 py-3 text-base outline-none focus:border-verde-vivo"
-          />
+          <MoneyInput value={monto} onChange={setMonto} autoFocus />
         </Campo>
 
         {tipo !== 'abono' && (

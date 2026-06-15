@@ -3,6 +3,7 @@ import { DEUDAS_INIT } from '../lib/constantes'
 import { fmt } from '../lib/format'
 import { useApp } from '../store/AppContext'
 import type { Deuda, TipoDeuda } from '../types'
+import { MoneyInput } from './MoneyInput'
 
 type DeudaNueva = Omit<Deuda, 'id'>
 type Paso = 'bienvenida' | 'ingreso' | 'inicio' | 'deudas'
@@ -43,14 +44,9 @@ export function Onboarding() {
             <p className="mt-1 text-[13px] text-gris">
               Nos ayuda a calcular cuánto puedes destinar a tus deudas. Puedes cambiarlo luego.
             </p>
-            <input
-              type="number"
-              inputMode="numeric"
-              placeholder="Ej: 2.500.000"
-              value={ingreso}
-              onChange={(e) => setIngreso(e.target.value)}
-              className="mt-4 w-full rounded-xl border-[1.5px] border-linea bg-white px-3.5 py-3 text-base outline-none focus:border-verde-vivo focus:ring-4 focus:ring-verde-vivo/15"
-            />
+            <div className="mt-4">
+              <MoneyInput value={ingreso} onChange={setIngreso} placeholder="Ej: 2.500.000" />
+            </div>
             <Boton onClick={() => setPaso('inicio')}>Continuar</Boton>
             <Secundario onClick={() => setPaso('inicio')}>Omitir por ahora</Secundario>
           </Tarjeta>
@@ -181,14 +177,7 @@ function PasoDeudas({
             </button>
           ))}
         </div>
-        <input
-          placeholder="Saldo que debes"
-          type="number"
-          inputMode="numeric"
-          value={saldo}
-          onChange={(e) => setSaldo(e.target.value)}
-          className="w-full rounded-lg border-[1.5px] border-linea px-3 py-2.5 text-[15px] outline-none focus:border-verde-vivo"
-        />
+        <MoneyInput value={saldo} onChange={setSaldo} placeholder="Saldo que debes" />
         <div className="flex gap-2">
           <input
             placeholder="Tasa % E.A."
@@ -198,14 +187,9 @@ function PasoDeudas({
             onChange={(e) => setTasaEA(e.target.value)}
             className="w-full rounded-lg border-[1.5px] border-linea px-3 py-2.5 text-[15px] outline-none focus:border-verde-vivo"
           />
-          <input
-            placeholder="Cuota mensual"
-            type="number"
-            inputMode="numeric"
-            value={cuota}
-            onChange={(e) => setCuota(e.target.value)}
-            className="w-full rounded-lg border-[1.5px] border-linea px-3 py-2.5 text-[15px] outline-none focus:border-verde-vivo"
-          />
+          <div className="w-full">
+            <MoneyInput value={cuota} onChange={setCuota} placeholder="Cuota mensual" />
+          </div>
         </div>
         <button
           onClick={agregar}
