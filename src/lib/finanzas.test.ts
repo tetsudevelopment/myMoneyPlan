@@ -7,6 +7,7 @@ import {
   deudaTotalActual,
   deudasVivas,
   detectarHormiga,
+  flujoDiario,
   flujoMensual,
   gastosPorCategoria,
   generarPlan,
@@ -131,6 +132,27 @@ describe('flujo mensual', () => {
     const serie = flujoMensual(movs, '2026-06', 2)
     expect(serie[1]).toEqual({ mes: '2026-06', ingresos: 5000, gastos: 1200 })
     expect(serie[0]).toEqual({ mes: '2026-05', ingresos: 4000, gastos: 800 })
+  })
+})
+
+describe('flujo diario', () => {
+  const movs = [
+    mov({ tipo: 'gasto', monto: 100, fecha: '2026-06-01' }),
+    mov({ tipo: 'gasto', monto: 250, fecha: '2026-06-15' }),
+    mov({ tipo: 'ingreso', monto: 3000, fecha: '2026-06-15' }),
+    mov({ tipo: 'gasto', monto: 999, fecha: '2026-05-15' }), // otro mes
+  ]
+  it('junio 2026 tiene 30 días', () => {
+    expect(flujoDiario(movs, '2026-06')).toHaveLength(30)
+  })
+  it('suma por día (ignora otros meses)', () => {
+    const serie = flujoDiario(movs, '2026-06')
+    expect(serie[0]).toEqual({ dia: 1, ingresos: 0, gastos: 100 })
+    expect(serie[14]).toEqual({ dia: 15, ingresos: 3000, gastos: 250 })
+    expect(serie[1]).toEqual({ dia: 2, ingresos: 0, gastos: 0 })
+  })
+  it('febrero 2026 tiene 28 días', () => {
+    expect(flujoDiario([], '2026-02')).toHaveLength(28)
   })
 })
 

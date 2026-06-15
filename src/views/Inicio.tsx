@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { GraficoFlujo } from '../components/GraficoFlujo'
+import { GraficoFlujo, type PuntoFlujo } from '../components/GraficoFlujo'
 import { InstallBanner } from '../components/InstallBanner'
-import { mesActual, nombreMesActual } from '../lib/fechas'
-import { flujoMensual, statsDelMes } from '../lib/finanzas'
+import { mesActual, nombreMes, nombreMesActual } from '../lib/fechas'
+import { flujoDiario, flujoMensual, statsDelMes } from '../lib/finanzas'
 import { fmt } from '../lib/format'
 import { useApp } from '../store/AppContext'
 
@@ -13,13 +13,28 @@ const RANGOS: { label: string; meses: number }[] = [
   { label: '12M', meses: 12 },
 ]
 
+const etiquetaMes = (ym: string) => nombreMes(Number(ym.split('-')[1]) - 1).slice(0, 3)
+
 export function Inicio() {
   const { estado } = useApp()
   const [meses, setMeses] = useState(6)
   const stats = statsDelMes(estado.movimientos, mesActual())
-  const serie = flujoMensual(estado.movimientos, mesActual(), meses)
   const mes = nombreMesActual()
   const positivo = stats.disponible >= 0
+
+  // Rango "Mes" => día por día; los demás => mes por mes.
+  const datos: PuntoFlujo[] =
+    meses === 1
+      ? flujoDiario(estado.movimientos, mesActual()).map((d) => ({
+          etiqueta: String(d.dia),
+          ingresos: d.ingresos,
+          gastos: d.gastos,
+        }))
+      : flujoMensual(estado.movimientos, mesActual(), meses).map((m) => ({
+          etiqueta: etiquetaMes(m.mes),
+          ingresos: m.ingresos,
+          gastos: m.gastos,
+        }))
 
   return (
     <div className="lg:grid lg:grid-cols-[1.6fr_1fr] lg:items-start lg:gap-5">
@@ -50,7 +65,7 @@ export function Inicio() {
                 Ingresos vs gastos
               </h2>
               <p className="mt-0.5 text-[11.5px] text-gris-claro">
-                {meses === 1 ? 'Este mes' : `Últimos ${meses} meses`}
+                {meses === 1 ? `Día a día · ${mes}` : `Últimos ${meses} meses`}
               </p>
             </div>
             <div className="flex flex-shrink-0 gap-1 rounded-xl bg-crema p-1">
@@ -67,7 +82,7 @@ export function Inicio() {
               ))}
             </div>
           </div>
-          <GraficoFlujo datos={serie} />
+          <GraficoFlujo datos={datos} />
         </section>
       </div>
 

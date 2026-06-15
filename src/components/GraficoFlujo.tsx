@@ -1,16 +1,16 @@
-import { nombreMes } from '../lib/fechas'
-import type { FlujoMes } from '../lib/finanzas'
 import { fmt } from '../lib/format'
 
-const etiquetaMes = (ym: string) => {
-  const m = Number(ym.split('-')[1]) - 1
-  return nombreMes(m).slice(0, 3)
+export interface PuntoFlujo {
+  etiqueta: string
+  ingresos: number
+  gastos: number
 }
 
-/** Gráfico de barras: ingresos vs gastos por mes (CSS, responsive). */
-export function GraficoFlujo({ datos }: { datos: FlujoMes[] }) {
+/** Gráfico de barras: ingresos vs gastos por punto (mes o día). CSS, responsive. */
+export function GraficoFlujo({ datos }: { datos: PuntoFlujo[] }) {
   const max = Math.max(1, ...datos.flatMap((d) => [d.ingresos, d.gastos]))
   const hayDatos = datos.some((d) => d.ingresos > 0 || d.gastos > 0)
+  const muchos = datos.length > 12 // vista diaria: columnas fijas + scroll
 
   if (!hayDatos) {
     return (
@@ -37,26 +37,33 @@ export function GraficoFlujo({ datos }: { datos: FlujoMes[] }) {
       </div>
 
       {/* Barras */}
-      <div className="flex items-end justify-between gap-2">
-        {datos.map((d) => (
-          <div key={d.mes} className="flex flex-1 flex-col items-center">
-            <div className="flex h-32 w-full items-end justify-center gap-1">
-              <div
-                className="w-3.5 rounded-t-md bg-verde-vivo transition-all sm:w-5"
-                style={{ height: altura(d.ingresos) }}
-                title={`Ingresos: ${fmt(d.ingresos)}`}
-              />
-              <div
-                className="w-3.5 rounded-t-md bg-rojo transition-all sm:w-5"
-                style={{ height: altura(d.gastos) }}
-                title={`Gastos: ${fmt(d.gastos)}`}
-              />
+      <div className={muchos ? 'overflow-x-auto pb-1' : ''}>
+        <div
+          className={`flex items-end gap-1.5 ${muchos ? 'min-w-max' : 'justify-between gap-2'}`}
+        >
+          {datos.map((d, i) => (
+            <div
+              key={i}
+              className={`flex flex-col items-center ${muchos ? 'w-6' : 'flex-1'}`}
+            >
+              <div className="flex h-32 w-full items-end justify-center gap-[3px]">
+                <div
+                  className={`rounded-t bg-verde-vivo transition-all ${muchos ? 'w-2' : 'w-3.5 sm:w-5'}`}
+                  style={{ height: altura(d.ingresos) }}
+                  title={`${d.etiqueta} · Ingresos: ${fmt(d.ingresos)}`}
+                />
+                <div
+                  className={`rounded-t bg-rojo transition-all ${muchos ? 'w-2' : 'w-3.5 sm:w-5'}`}
+                  style={{ height: altura(d.gastos) }}
+                  title={`${d.etiqueta} · Gastos: ${fmt(d.gastos)}`}
+                />
+              </div>
+              <span className="mt-1.5 text-center text-[10px] font-medium capitalize text-gris-claro">
+                {d.etiqueta}
+              </span>
             </div>
-            <span className="mt-1.5 text-center text-[10px] font-medium capitalize text-gris-claro">
-              {etiquetaMes(d.mes)}
-            </span>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   )

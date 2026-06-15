@@ -126,6 +126,28 @@ export function flujoMensual(
   })
 }
 
+export interface FlujoDia {
+  /** Día del mes (1..N). */
+  dia: number
+  ingresos: number
+  gastos: number
+}
+
+/** Ingresos y gastos por día para un mes 'YYYY-MM'. Pura. */
+export function flujoDiario(movimientos: Movimiento[], mesStr: string): FlujoDia[] {
+  const [anio, mes] = mesStr.split('-').map(Number)
+  const dias = new Date(anio, mes, 0).getDate() // día 0 del mes siguiente = último del actual
+  const res: FlujoDia[] = []
+  for (let d = 1; d <= dias; d++) {
+    const fecha = `${mesStr}-${String(d).padStart(2, '0')}`
+    const delDia = movimientos.filter((m) => m.fecha === fecha)
+    const ingresos = delDia.filter((m) => m.tipo === 'ingreso').reduce((s, m) => s + m.monto, 0)
+    const gastos = delDia.filter((m) => m.tipo === 'gasto').reduce((s, m) => s + m.monto, 0)
+    res.push({ dia: d, ingresos, gastos })
+  }
+  return res
+}
+
 export interface AlertaHormiga {
   activa: boolean
   total: number
