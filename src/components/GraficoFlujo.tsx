@@ -1,6 +1,6 @@
 import { nombreMes } from '../lib/fechas'
 import type { FlujoMes } from '../lib/finanzas'
-import { fmtK } from '../lib/format'
+import { fmt } from '../lib/format'
 
 const etiquetaMes = (ym: string) => {
   const m = Number(ym.split('-')[1]) - 1
@@ -17,10 +17,12 @@ export function GraficoFlujo({ datos }: { datos: FlujoMes[] }) {
       <div className="py-8 text-center text-[13px] text-gris-claro">
         Aún no hay ingresos ni gastos registrados.
         <br />
-        Toca el botón + para empezar.
+        Toca el botón + para registrar uno.
       </div>
     )
   }
+
+  const altura = (v: number) => (v > 0 ? `${Math.max((v / max) * 100, 4)}%` : '0%')
 
   return (
     <div>
@@ -35,36 +37,27 @@ export function GraficoFlujo({ datos }: { datos: FlujoMes[] }) {
       </div>
 
       {/* Barras */}
-      <div className="flex h-36 items-end justify-between gap-2">
+      <div className="flex items-end justify-between gap-2">
         {datos.map((d) => (
-          <div key={d.mes} className="flex flex-1 flex-col items-center gap-1.5">
-            <div className="flex h-full w-full items-end justify-center gap-1">
-              <Barra valor={d.ingresos} max={max} color="bg-verde-vivo" />
-              <Barra valor={d.gastos} max={max} color="bg-rojo" />
+          <div key={d.mes} className="flex flex-1 flex-col items-center">
+            <div className="flex h-32 w-full items-end justify-center gap-1">
+              <div
+                className="w-3.5 rounded-t-md bg-verde-vivo transition-all sm:w-5"
+                style={{ height: altura(d.ingresos) }}
+                title={`Ingresos: ${fmt(d.ingresos)}`}
+              />
+              <div
+                className="w-3.5 rounded-t-md bg-rojo transition-all sm:w-5"
+                style={{ height: altura(d.gastos) }}
+                title={`Gastos: ${fmt(d.gastos)}`}
+              />
             </div>
-            <span className="text-[10px] font-medium capitalize text-gris-claro">
+            <span className="mt-1.5 text-center text-[10px] font-medium capitalize text-gris-claro">
               {etiquetaMes(d.mes)}
             </span>
           </div>
         ))}
       </div>
-    </div>
-  )
-}
-
-function Barra({ valor, max, color }: { valor: number; max: number; color: string }) {
-  const pct = Math.round((valor / max) * 100)
-  return (
-    <div className="group relative flex w-3.5 items-end sm:w-5" style={{ height: '100%' }}>
-      <div
-        className={`w-full rounded-t-md ${color} transition-all`}
-        style={{ height: `${valor > 0 ? Math.max(pct, 3) : 0}%` }}
-      />
-      {valor > 0 && (
-        <span className="pointer-events-none absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-carbon/85 px-1.5 py-0.5 text-[9px] font-semibold text-crema opacity-0 transition group-hover:opacity-100">
-          {fmtK(valor)}
-        </span>
-      )}
     </div>
   )
 }

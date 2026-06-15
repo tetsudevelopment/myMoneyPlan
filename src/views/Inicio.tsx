@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { GraficoFlujo } from '../components/GraficoFlujo'
 import { InstallBanner } from '../components/InstallBanner'
 import { mesActual, nombreMesActual } from '../lib/fechas'
@@ -5,10 +6,18 @@ import { flujoMensual, statsDelMes } from '../lib/finanzas'
 import { fmt } from '../lib/format'
 import { useApp } from '../store/AppContext'
 
+const RANGOS: { label: string; meses: number }[] = [
+  { label: 'Mes', meses: 1 },
+  { label: '3M', meses: 3 },
+  { label: '6M', meses: 6 },
+  { label: '12M', meses: 12 },
+]
+
 export function Inicio() {
   const { estado } = useApp()
+  const [meses, setMeses] = useState(6)
   const stats = statsDelMes(estado.movimientos, mesActual())
-  const serie = flujoMensual(estado.movimientos, mesActual(), 6)
+  const serie = flujoMensual(estado.movimientos, mesActual(), meses)
   const mes = nombreMesActual()
   const positivo = stats.disponible >= 0
 
@@ -35,10 +44,29 @@ export function Inicio() {
 
         {/* Gráfico ingresos vs gastos */}
         <section className="mb-4 rounded-card bg-white p-[18px] shadow-suave lg:mb-0">
-          <h2 className="mb-1 text-[13px] font-semibold uppercase tracking-wide text-gris">
-            Ingresos vs gastos
-          </h2>
-          <p className="mb-3 text-[11.5px] text-gris-claro">Últimos 6 meses</p>
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-[13px] font-semibold uppercase tracking-wide text-gris">
+                Ingresos vs gastos
+              </h2>
+              <p className="mt-0.5 text-[11.5px] text-gris-claro">
+                {meses === 1 ? 'Este mes' : `Últimos ${meses} meses`}
+              </p>
+            </div>
+            <div className="flex flex-shrink-0 gap-1 rounded-xl bg-crema p-1">
+              {RANGOS.map((r) => (
+                <button
+                  key={r.meses}
+                  onClick={() => setMeses(r.meses)}
+                  className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
+                    meses === r.meses ? 'bg-verde-prof text-crema' : 'text-gris'
+                  }`}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <GraficoFlujo datos={serie} />
         </section>
       </div>
