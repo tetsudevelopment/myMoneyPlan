@@ -24,7 +24,7 @@ export function Gastos() {
   return (
     <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-5">
       {/* Columna izquierda: hormiga + donut */}
-      <div>
+      <div className="min-w-0">
         {hormiga.activa && (
           <div className="mb-3.5 rounded-2xl border border-[#F0D5BC] bg-gradient-to-br from-[#FDF0E6] to-[#FAE6D5] p-[15px]">
             <div className="mb-1.5 flex items-center gap-2">
@@ -48,7 +48,7 @@ export function Gastos() {
       </div>
 
       {/* Columna derecha: movimientos */}
-      <div>
+      <div className="min-w-0">
         <h2 className="mx-1 mb-2.5 mt-[18px] text-[13px] font-bold uppercase tracking-wide text-gris lg:mt-0">
           Movimientos recientes
         </h2>

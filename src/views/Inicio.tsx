@@ -39,7 +39,7 @@ export function Inicio() {
   return (
     <div className="lg:grid lg:grid-cols-[1.6fr_1fr] lg:items-start lg:gap-5">
       {/* Columna izquierda: balance + gráfico */}
-      <div className="lg:space-y-4">
+      <div className="min-w-0 lg:space-y-4">
         <InstallBanner />
 
         {/* Balance del mes */}
@@ -87,7 +87,7 @@ export function Inicio() {
       </div>
 
       {/* Columna derecha: detalle del mes */}
-      <section className="grid grid-cols-2 gap-2.5 lg:grid-cols-1">
+      <section className="grid min-w-0 grid-cols-2 gap-2.5 lg:grid-cols-1">
         <Mini label={`Ingresos · ${mes}`} valor={fmt(stats.ingresado)} tono="verde" />
         <Mini label={`Gastos · ${mes}`} valor={fmt(stats.gastado)} tono="rojo" />
         <Mini label="Abonado a deudas" valor={fmt(stats.pagado)} />
