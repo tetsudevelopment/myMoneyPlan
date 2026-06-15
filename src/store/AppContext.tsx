@@ -486,6 +486,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await cerrarSesion()
     setSesionEmail(null)
     setNube('local')
+    // Tras cerrar sesión, volver a la pantalla de login (si hay nube configurada).
+    if (hayNube()) setAuthAbierto(true)
     notificar('Sesión cerrada')
   }, [notificar])
 

@@ -20,3 +20,11 @@ export const nombreMesActual = (): string => nombreMes(new Date().getMonth())
 /** Nombre del mes actual con año, ej. "junio 2026". */
 export const nombreMesActualConAnio = (): string =>
   `${nombreMesActual()} ${new Date().getFullYear()}`
+
+/** Saludo según la hora del día. */
+export const saludo = (): string => {
+  const h = new Date().getHours()
+  if (h < 12) return 'Buenos días'
+  if (h < 19) return 'Buenas tardes'
+  return 'Buenas noches'
+}

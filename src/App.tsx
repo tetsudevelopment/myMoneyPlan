@@ -58,16 +58,23 @@ function Shell() {
 
       {/* Columna principal */}
       <div className="relative mx-auto min-h-screen w-full max-w-app pb-[calc(72px+env(safe-area-inset-bottom))] lg:max-w-none lg:flex-1 lg:pb-0">
-        <header className="relative overflow-hidden bg-verde-prof px-5 pb-[22px] pt-[calc(env(safe-area-inset-top)+18px)] text-crema lg:px-8 lg:pb-7 lg:pt-7">
-          <div className="lg:mx-auto lg:max-w-5xl">
-            <h1 className="text-sm font-medium tracking-wide opacity-75 lg:text-base">{titulo}</h1>
-            <p className="mt-0.5 text-xs opacity-55 lg:text-sm">{sub}</p>
-          </div>
-        </header>
+        {/* Inicio trae su propio encabezado claro; las demás vistas usan el verde */}
+        {vista !== 'resumen' && (
+          <header className="relative overflow-hidden bg-verde-prof px-5 pb-[22px] pt-[calc(env(safe-area-inset-top)+18px)] text-crema lg:px-8 lg:pb-7 lg:pt-7">
+            <div className="lg:mx-auto lg:max-w-5xl">
+              <h1 className="text-sm font-medium tracking-wide opacity-75 lg:text-base">{titulo}</h1>
+              <p className="mt-0.5 text-xs opacity-55 lg:text-sm">{sub}</p>
+            </div>
+          </header>
+        )}
 
-        <main className="px-4 pb-6 pt-[18px] lg:px-8 lg:pb-12 lg:pt-8">
+        <main
+          className={`px-4 pb-6 lg:px-8 lg:pb-12 lg:pt-8 ${
+            vista === 'resumen' ? 'pt-[calc(env(safe-area-inset-top)+16px)]' : 'pt-[18px]'
+          }`}
+        >
           <div className="lg:mx-auto lg:max-w-5xl">
-            {vista === 'resumen' && <Inicio />}
+            {vista === 'resumen' && <Inicio onPerfil={() => irA('perfil')} />}
             {vista === 'deudas' && <Deudas onAbonar={abrirAbono} />}
             {vista === 'gastos' && <Gastos />}
             {vista === 'plan' && <Plan />}
