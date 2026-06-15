@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0F2A24">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mi Plan">
+<title>Mi Plan — Salir de deudas</title>
+<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22Mi%20Plan%22%2C%22short_name%22%3A%22Mi%20Plan%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230F2A24%22%2C%22theme_color%22%3A%22%230F2A24%22%2C%22icons%22%3A%5B%5D%7D">
+<style>
+:root{
+  --verde-prof:#0F2A24;
+  --verde-medio:#1D6E56;
+  --verde-vivo:#1D9E75;
+  --verde-claro:#E1F5EE;
+  --crema:#F7F5EF;
+  --carbon:#1A1E1C;
+  --gris:#6B7270;
+  --gris-claro:#9DA4A1;
+  --linea:#E4E6E2;
+  --blanco:#FFFFFF;
+  --rojo:#E24B4A;
+  --rojo-bg:#FCEBEB;
+  --ambar:#BA7517;
+  --azul:#378ADD;
+  --sombra:0 1px 3px rgba(15,42,36,0.06),0 1px 2px rgba(15,42,36,0.04);
+  --sombra-lg:0 4px 16px rgba(15,42,36,0.08);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{overscroll-behavior-y:none;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  background:var(--crema);
+  color:var(--carbon);
+  font-size:15px;
+  line-height:1.5;
+  padding-bottom:calc(72px + env(safe-area-inset-bottom));
+  -webkit-font-smoothing:antialiased;
+}
+.app{max-width:480px;margin:0 auto;min-height:100vh;}
+
+/* HEADER */
+.topbar{
+  background:var(--verde-prof);
+  color:var(--crema);
+  padding:calc(env(safe-area-inset-top) + 18px) 20px 22px;
+  position:relative;
+  overflow:hidden;
+}
+.topbar::after{
+  content:"";position:absolute;right:-40px;top:-40px;
+  width:160px;height:160px;border-radius:50%;
+  background:rgba(29,158,117,0.12);
+}
+.topbar h1{font-size:14px;font-weight:500;opacity:0.75;letter-spacing:0.3px;}
+.topbar .sub{font-size:12px;opacity:0.55;margin-top:2px;}
+
+/* VIEWS */
+.view{display:none;padding:18px 16px 24px;animation:fade .25s ease;}
+.view.active{display:block;}
+@keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+
+/* CARDS */
+.card{background:var(--blanco);border-radius:18px;padding:18px;box-shadow:var(--sombra);margin-bottom:14px;}
+.card-title{font-size:13px;font-weight:600;color:var(--gris);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;}
+
+/* HERO DEUDA */
+.hero{
+  background:linear-gradient(135deg,var(--verde-prof),var(--verde-medio));
+  color:var(--crema);border-radius:22px;padding:22px;margin-bottom:16px;
+  position:relative;overflow:hidden;box-shadow:var(--sombra-lg);
+}
+.hero-label{font-size:12px;opacity:0.7;font-weight:500;letter-spacing:0.4px;}
+.hero-monto{font-size:32px;font-weight:700;margin:4px 0 2px;letter-spacing:-0.5px;}
+.hero-sub{font-size:12.5px;opacity:0.65;}
+.hero-prog{height:7px;background:rgba(255,255,255,0.18);border-radius:99px;margin-top:16px;overflow:hidden;}
+.hero-prog-fill{height:100%;background:var(--verde-vivo);border-radius:99px;transition:width .6s cubic-bezier(.2,.8,.2,1);}
+.hero-prog-lbl{display:flex;justify-content:space-between;font-size:11px;opacity:0.7;margin-top:7px;}
+
+/* MINI STATS */
+.stats-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.mini{background:var(--blanco);border-radius:16px;padding:14px;box-shadow:var(--sombra);}
+.mini-lbl{font-size:11px;color:var(--gris);font-weight:500;}
+.mini-val{font-size:19px;font-weight:700;margin-top:3px;letter-spacing:-0.3px;}
+.mini-val.verde{color:var(--verde-vivo);}
+.mini-val.rojo{color:var(--rojo);}
+
+/* DEUDA ITEM */
+.deuda{background:var(--blanco);border-radius:16px;padding:15px;box-shadow:var(--sombra);margin-bottom:11px;position:relative;overflow:hidden;}
+.deuda.pagada{opacity:0.55;}
+.deuda.pagada::after{content:"✓ PAGADA";position:absolute;top:12px;right:14px;font-size:10px;font-weight:700;color:var(--verde-vivo);background:var(--verde-claro);padding:3px 9px;border-radius:99px;}
+.deuda-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
+.deuda-nombre{font-size:15px;font-weight:600;}
+.deuda-meta{font-size:11.5px;color:var(--gris);margin-top:2px;}
+.deuda-tag{font-size:10px;font-weight:600;padding:2px 8px;border-radius:99px;text-transform:uppercase;letter-spacing:0.3px;}
+.tag-tarjeta{background:var(--rojo-bg);color:var(--rojo);}
+.tag-credito{background:#EAF1FB;color:var(--azul);}
+.deuda-saldo{font-size:21px;font-weight:700;letter-spacing:-0.3px;}
+.deuda-prog{height:5px;background:var(--linea);border-radius:99px;margin-top:11px;overflow:hidden;}
+.deuda-prog-fill{height:100%;border-radius:99px;transition:width .5s;}
+.deuda-foot{display:flex;justify-content:space-between;font-size:11px;color:var(--gris);margin-top:7px;}
+.deuda-btn{margin-top:12px;width:100%;border:none;background:var(--verde-claro);color:var(--verde-medio);font-weight:600;font-size:13px;padding:10px;border-radius:11px;cursor:pointer;transition:.15s;}
+.deuda-btn:active{transform:scale(.98);background:#cdeee2;}
+
+/* ORDEN ATAQUE BADGE */
+.ataque-badge{position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--verde-vivo);}
+.deuda.objetivo{border:1.5px solid var(--verde-vivo);}
+.objetivo-lbl{display:inline-block;font-size:10px;font-weight:700;color:var(--verde-vivo);background:var(--verde-claro);padding:2px 8px;border-radius:99px;margin-bottom:6px;}
+
+/* GASTOS */
+.gasto-item{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--linea);}
+.gasto-item:last-child{border-bottom:none;}
+.gasto-icono{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;}
+.gasto-info{flex:1;min-width:0;}
+.gasto-nombre{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.gasto-cat{font-size:11.5px;color:var(--gris);}
+.gasto-monto{font-size:15px;font-weight:600;flex-shrink:0;}
+.gasto-monto.ingreso{color:var(--verde-vivo);}
+.gasto-fecha{font-size:10px;color:var(--gris-claro);}
+
+/* CHIP CATEGORIAS */
+.cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:8px;margin-top:6px;}
+.cat-chip{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-radius:13px;border:1.5px solid var(--linea);cursor:pointer;transition:.15s;background:var(--blanco);}
+.cat-chip.sel{border-color:var(--verde-vivo);background:var(--verde-claro);}
+.cat-chip-ico{font-size:22px;}
+.cat-chip-lbl{font-size:10px;font-weight:500;text-align:center;line-height:1.1;}
+
+/* GASTO HORMIGA ALERT */
+.hormiga{background:linear-gradient(135deg,#FDF0E6,#FAE6D5);border-radius:16px;padding:15px;margin-bottom:14px;border:1px solid #F0D5BC;}
+.hormiga-top{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.hormiga-top strong{font-size:13px;color:var(--ambar);}
+.hormiga-txt{font-size:12.5px;color:#8A5A1E;line-height:1.45;}
+
+/* FORM */
+.fld{margin-bottom:14px;}
+.fld label{display:block;font-size:12px;font-weight:600;color:var(--gris);margin-bottom:6px;}
+.fld input,.fld select{width:100%;border:1.5px solid var(--linea);border-radius:12px;padding:13px 14px;font-size:16px;background:var(--blanco);font-family:inherit;color:var(--carbon);}
+.fld input:focus,.fld select:focus{outline:none;border-color:var(--verde-vivo);}
+.seg{display:flex;gap:8px;margin-bottom:14px;}
+.seg button{flex:1;padding:12px;border:1.5px solid var(--linea);background:var(--blanco);border-radius:12px;font-size:14px;font-weight:600;color:var(--gris);cursor:pointer;transition:.15s;font-family:inherit;}
+.seg button.on{background:var(--verde-prof);color:var(--crema);border-color:var(--verde-prof);}
+.btn-primary{width:100%;background:var(--verde-prof);color:var(--crema);border:none;border-radius:13px;padding:15px;font-size:15px;font-weight:600;cursor:pointer;transition:.15s;font-family:inherit;}
+.btn-primary:active{transform:scale(.98);}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(15,42,36,0.45);display:none;align-items:flex-end;z-index:100;animation:fade .2s;}
+.modal-bg.show{display:flex;}
+.modal{background:var(--crema);width:100%;max-width:480px;margin:0 auto;border-radius:24px 24px 0 0;padding:22px 18px calc(22px + env(safe-area-inset-bottom));max-height:88vh;overflow-y:auto;animation:slideup .3s cubic-bezier(.2,.8,.2,1);}
+@keyframes slideup{from{transform:translateY(100%);}to{transform:none;}}
+.modal-handle{width:38px;height:4px;background:var(--linea);border-radius:99px;margin:0 auto 16px;}
+.modal h3{font-size:18px;font-weight:700;margin-bottom:16px;}
+
+/* NAV */
+.nav{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:var(--blanco);border-top:1px solid var(--linea);display:flex;padding:8px 0 calc(8px + env(safe-area-inset-bottom));z-index:50;}
+.nav button{flex:1;border:none;background:none;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px;cursor:pointer;color:var(--gris-claro);transition:.15s;font-family:inherit;}
+.nav button.on{color:var(--verde-prof);}
+.nav-ico{font-size:21px;}
+.nav-lbl{font-size:10px;font-weight:600;}
+
+/* FAB */
+.fab{position:fixed;bottom:calc(80px + env(safe-area-inset-bottom));right:max(16px,calc(50% - 240px + 16px));width:56px;height:56px;border-radius:50%;background:var(--verde-vivo);color:#fff;border:none;font-size:28px;box-shadow:0 6px 20px rgba(29,158,117,0.4);cursor:pointer;z-index:55;display:flex;align-items:center;justify-content:center;transition:.15s;}
+.fab:active{transform:scale(.92);}
+
+.empty{text-align:center;padding:32px 16px;color:var(--gris-claro);}
+.empty-ico{font-size:38px;margin-bottom:8px;}
+.empty-txt{font-size:13px;}
+.sec-title{font-size:13px;font-weight:700;color:var(--gris);margin:18px 4px 10px;text-transform:uppercase;letter-spacing:0.4px;}
+.donut-wrap{display:flex;align-items:center;gap:16px;}
+.donut{flex-shrink:0;}
+.leyenda{flex:1;}
+.ley-item{display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:6px;}
+.ley-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
+.ley-val{margin-left:auto;font-weight:600;}
+.toast{position:fixed;bottom:calc(90px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:var(--verde-prof);color:var(--crema);padding:12px 20px;border-radius:12px;font-size:13px;font-weight:500;z-index:200;opacity:0;transition:.3s;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;}
+.install-banner{background:var(--verde-claro);border-radius:14px;padding:12px 14px;margin-bottom:14px;display:none;align-items:center;gap:10px;}
+.install-banner.show{display:flex;}
+.install-banner .txt{flex:1;font-size:12.5px;color:var(--verde-medio);}
+.install-banner button{background:var(--verde-prof);color:#fff;border:none;padding:8px 14px;border-radius:9px;font-size:12px;font-weight:600;cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <h1 id="topTitle">Resumen</h1>
+    <div class="sub" id="topSub">Tu camino a cero deudas</div>
+  </div>
+
+  <!-- VISTA: RESUMEN -->
+  <div class="view active" id="v-resumen">
+    <div class="install-banner" id="installBanner">
+      <span style="font-size:20px">📲</span>
+      <span class="txt">Instala Mi Plan en tu teléfono para abrirla como app</span>
+      <button onclick="instalar()">Instalar</button>
+    </div>
+    <div class="hero">
+      <div class="hero-label">DEUDA TOTAL RESTANTE</div>
+      <div class="hero-monto" id="heroMonto">$0</div>
+      <div class="hero-sub" id="heroSub">de $49.982.845 inicial</div>
+      <div class="hero-prog"><div class="hero-prog-fill" id="heroProg" style="width:0%"></div></div>
+      <div class="hero-prog-lbl"><span id="heroPct">0% pagado</span><span id="heroMeta">Meta: 14 meses</span></div>
+    </div>
+    <div class="stats-row">
+      <div class="mini"><div class="mini-lbl">Pagado este mes</div><div class="mini-val verde" id="statPagadoMes">$0</div></div>
+      <div class="mini"><div class="mini-lbl">Gastos del mes</div><div class="mini-val rojo" id="statGastosMes">$0</div></div>
+    </div>
+    <div class="stats-row">
+      <div class="mini"><div class="mini-lbl">Ingresos del mes</div><div class="mini-val" id="statIngresoMes">$0</div></div>
+      <div class="mini"><div class="mini-lbl">Disponible</div><div class="mini-val" id="statDispo">$0</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Próximo objetivo</div>
+      <div id="proximoObjetivo"></div>
+    </div>
+  </div>
+
+  <!-- VISTA: DEUDAS -->
+  <div class="view" id="v-deudas">
+    <div class="stats-row">
+      <div class="mini"><div class="mini-lbl">Deudas activas</div><div class="mini-val" id="deudasActivas">9</div></div>
+      <div class="mini"><div class="mini-lbl">Cuota mensual</div><div class="mini-val" id="cuotaMensual">$0</div></div>
+    </div>
+    <div id="listaDeudas"></div>
+    <button id="btnIntereses" class="btn-primary" style="background:var(--blanco);color:var(--ambar);border:1.5px solid #F0D5BC;margin-top:6px" onclick="confirmarIntereses()">↻ Aplicar intereses del mes a todas las deudas</button>
+    <div id="btnInteresesNota" style="font-size:11px;color:var(--gris-claro);text-align:center;margin-top:8px;line-height:1.4">Usa esto una vez al mes, cuando lleguen tus nuevos extractos, para sumar los intereses que cobran los bancos.</div>
+  </div>
+
+  <!-- VISTA: GASTOS -->
+  <div class="view" id="v-gastos">
+    <div class="hormiga" id="hormigaAlert" style="display:none">
+      <div class="hormiga-top"><span style="font-size:18px">🐜</span><strong>Gastos hormiga detectados</strong></div>
+      <div class="hormiga-txt" id="hormigaTxt"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Gastos por categoría — este mes</div>
+      <div class="donut-wrap">
+        <canvas id="donutGastos" class="donut" width="120" height="120"></canvas>
+        <div class="leyenda" id="leyendaGastos"></div>
+      </div>
+    </div>
+    <div class="sec-title">Movimientos recientes</div>
+    <div id="listaMovs"></div>
+  </div>
+
+  <!-- VISTA: PLAN -->
+  <div class="view" id="v-plan">
+    <div class="card" style="background:linear-gradient(135deg,var(--verde-prof),var(--verde-medio));color:var(--crema)">
+      <div style="font-size:12px;opacity:.7;font-weight:500">TU META</div>
+      <div style="font-size:26px;font-weight:700;margin:4px 0">Libre en 14 meses</div>
+      <div style="font-size:12.5px;opacity:.65">Pagando $1.312.776 extra cada mes sobre la deuda objetivo</div>
+    </div>
+    <div id="planMeses"></div>
+  </div>
+</div>
+
+<button class="fab" id="fab" onclick="abrirRegistro()">+</button>
+
+<!-- MODAL REGISTRO -->
+<div class="modal-bg" id="modalReg">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3 id="modalTitle">Registrar movimiento</h3>
+    <div class="seg">
+      <button id="segGasto" class="on" onclick="setTipo('gasto')">Gasto</button>
+      <button id="segIngreso" onclick="setTipo('ingreso')">Ingreso</button>
+      <button id="segAbono" onclick="setTipo('abono')">Abono deuda</button>
+    </div>
+    <div class="fld">
+      <label>Monto</label>
+      <input type="number" id="inMonto" inputmode="numeric" placeholder="0" />
+    </div>
+    <div class="fld" id="fldDesc">
+      <label>Descripción</label>
+      <input type="text" id="inDesc" placeholder="Ej: Almuerzo, Recibí pago..." />
+    </div>
+    <div class="fld" id="fldCat">
+      <label>Categoría</label>
+      <div class="cat-grid" id="catGrid"></div>
+    </div>
+    <div class="fld" id="fldDeuda" style="display:none">
+      <label>¿A qué deuda?</label>
+      <select id="inDeuda"></select>
+    </div>
+    <button class="btn-primary" onclick="guardarMov()">Guardar</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<nav class="nav">
+  <button class="on" id="nav-resumen" onclick="irA('resumen')"><span class="nav-ico">🏠</span><span class="nav-lbl">Inicio</span></button>
+  <button id="nav-deudas" onclick="irA('deudas')"><span class="nav-ico">💳</span><span class="nav-lbl">Deudas</span></button>
+  <button id="nav-gastos" onclick="irA('gastos')"><span class="nav-ico">📊</span><span class="nav-lbl">Gastos</span></button>
+  <button id="nav-plan" onclick="irA('plan')"><span class="nav-ico">🎯</span><span class="nav-lbl">Plan</span></button>
+</nav>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ============================================================
+//  CONFIGURACION SUPABASE  —  PEGA AQUI TUS CREDENCIALES
+// ============================================================
+//  1. SUPABASE_URL: tu Project URL (sin /rest/v1/ al final)
+//  2. SUPABASE_KEY: tu Publishable key (sb_publishable_...)
+//  Si las dejas vacias, la app funciona solo con datos locales.
+// ============================================================
+const SUPABASE_URL = "";   // <-- pega tu URL aqui, ej: https://xxxxx.supabase.co
+const SUPABASE_KEY = "";   // <-- pega tu publishable key aqui
+
+let sb = null;
+let usuarioActivo = null;
+const usandoNube = () => sb !== null && usuarioActivo !== null;
+
+if (SUPABASE_URL && SUPABASE_KEY) {
+  try {
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  } catch(e) { console.warn("No se pudo iniciar Supabase:", e); }
+}
+</script>
+<script>
+// ===== DATOS INICIALES =====
+const DEUDAS_INIT = [
+  {id:"latam",nombre:"Banco Bogotá LATAM",saldo:1522706,cuota:123000,tasaEA:24.33,tipo:"tarjeta",orden:1},
+  {id:"oro",nombre:"BBVA Oro",saldo:3816360,cuota:189906,tasaEA:28.79,tipo:"tarjeta",orden:2},
+  {id:"nu",nombre:"Nu",saldo:4186590,cuota:846984,tasaEA:25.0,tipo:"tarjeta",orden:3},
+  {id:"aqua",nombre:"BBVA AQUA",saldo:8129239,cuota:335784,tasaEA:28.17,tipo:"tarjeta",orden:4},
+  {id:"libredest",nombre:"Banco Bogotá Libre Destino",saldo:4210461,cuota:130061,tasaEA:26.08,tipo:"credito",orden:5},
+  {id:"prestamo1",nombre:"BBVA Préstamo 1",saldo:3925012,cuota:147586,tasaEA:26.35,tipo:"credito",orden:6},
+  {id:"claro",nombre:"Claro Xiaomi",saldo:3852103,cuota:233451,tasaEA:25.19,tipo:"credito",orden:7},
+  {id:"prestamo2",nombre:"BBVA Préstamo 2",saldo:3888700,cuota:125824,tasaEA:21.55,tipo:"credito",orden:8},
+  {id:"finecoop",nombre:"Finecoop",saldo:16451674,cuota:722428,tasaEA:21.0,tipo:"credito",orden:9},
+];
+const DEUDA_INICIAL_TOTAL = 49982845;
+const CATEGORIAS = [
+  {id:"mercado",nombre:"Mercado",icono:"🛒",color:"#1D9E75"},
+  {id:"gasolina",nombre:"Gasolina",icono:"⛽",color:"#BA7517"},
+  {id:"servicios",nombre:"Servicios",icono:"💡",color:"#378ADD"},
+  {id:"comida",nombre:"Comer fuera",icono:"🍔",color:"#D85A30"},
+  {id:"suscrip",nombre:"Suscripciones",icono:"📺",color:"#7F77DD"},
+  {id:"gaming",nombre:"Gaming",icono:"🎮",color:"#D4537E"},
+  {id:"transporte",nombre:"Transporte",icono:"🚌",color:"#0F6E56"},
+  {id:"salud",nombre:"Salud",icono:"💊",color:"#E24B4A"},
+  {id:"familia",nombre:"Familia",icono:"👨‍👩‍👦",color:"#993C1D"},
+  {id:"otros",nombre:"Otros",icono:"📦",color:"#5F5E5A"},
+];
+const PLAN_MESES = [
+  {mes:1,obj:"Banco Bogotá LATAM",total:4345800,liq:[]},
+  {mes:2,obj:"BBVA Oro",total:4339718,liq:["Banco Bogotá LATAM"]},
+  {mes:3,obj:"BBVA Oro",total:4345800,liq:[]},
+  {mes:4,obj:"BBVA Oro",total:3442271,liq:["BBVA Oro"]},
+  {mes:5,obj:"BBVA AQUA",total:3622922,liq:["Nu"]},
+  {mes:6,obj:"BBVA AQUA",total:4345800,liq:[]},
+  {mes:7,obj:"BBVA AQUA",total:4345800,liq:[]},
+  {mes:8,obj:"Banco Bogotá Libre Destino",total:4215406,liq:["BBVA AQUA"]},
+  {mes:9,obj:"Banco Bogotá Libre Destino",total:2760068,liq:["Banco Bogotá Libre Destino"]},
+  {mes:10,obj:"BBVA Préstamo 1",total:2946327,liq:["BBVA Préstamo 1"]},
+  {mes:11,obj:"Claro Xiaomi",total:1741883,liq:["Claro Xiaomi"]},
+  {mes:12,obj:"BBVA Préstamo 2",total:1452587,liq:["BBVA Préstamo 2"]},
+  {mes:13,obj:"Finecoop",total:4345800,liq:[]},
+  {mes:14,obj:"Finecoop",total:3725282,liq:["Finecoop"]},
+];
+
+// ===== ESTADO (localStorage) =====
+let estado = cargar();
+function cargar(){
+  try{
+    const s = JSON.parse(localStorage.getItem("miplan_v1"));
+    if(s && s.deudas) return s;
+  }catch(e){}
+  return {
+    deudas: JSON.parse(JSON.stringify(DEUDAS_INIT)),
+    movimientos: [],  // {id,tipo,monto,desc,cat,deudaId,fecha}
+    interesesAplicados: [],  // lista de meses "2026-06" donde ya se aplicaron intereses
+  };
+}
+function guardarLocal(){ localStorage.setItem("miplan_v1", JSON.stringify(estado)); }
+function guardar(){ guardarLocal(); }
+
+// ===== HELPERS =====
+const fmt = n => '$' + Math.round(n).toLocaleString('es-CO');
+const fmtK = n => { n=Math.round(n); if(n>=1000000) return '$'+(n/1000000).toFixed(1)+'M'; if(n>=1000) return '$'+Math.round(n/1000)+'k'; return '$'+n; };
+const hoy = () => new Date().toISOString().slice(0,10);
+const mesActual = () => new Date().toISOString().slice(0,7);
+const catById = id => CATEGORIAS.find(c=>c.id===id) || CATEGORIAS[CATEGORIAS.length-1];
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+// ===== NAVEGACION =====
+const TITULOS = {resumen:["Resumen","Tu camino a cero deudas"],deudas:["Mis deudas","Ordenadas por estrategia de pago"],gastos:["Gastos","¿En qué se va tu dinero?"],plan:["Mi plan","14 meses para ser libre"]};
+function irA(v){
+  document.querySelectorAll('.view').forEach(e=>e.classList.remove('active'));
+  document.getElementById('v-'+v).classList.add('active');
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('on'));
+  document.getElementById('nav-'+v).classList.add('on');
+  document.getElementById('topTitle').textContent=TITULOS[v][0];
+  document.getElementById('topSub').textContent=TITULOS[v][1];
+  if(v==='gastos') setTimeout(renderDonut,50);
+  window.scrollTo(0,0);
+}
+
+// ===== CALCULOS =====
+function deudaTotalActual(){ return estado.deudas.reduce((s,d)=>s+Math.max(0,d.saldo),0); }
+function movsMes(){ return estado.movimientos.filter(m=>m.fecha.startsWith(mesActual())); }
+function totalMes(tipo){ return movsMes().filter(m=>m.tipo===tipo).reduce((s,m)=>s+m.monto,0); }
+
+// ===== RENDER RESUMEN =====
+function renderResumen(){
+  const total = deudaTotalActual();
+  const pct = Math.max(0, Math.round((1 - total/DEUDA_INICIAL_TOTAL)*100));
+  document.getElementById('heroMonto').textContent = fmt(total);
+  document.getElementById('heroSub').textContent = 'de '+fmt(DEUDA_INICIAL_TOTAL)+' inicial';
+  document.getElementById('heroProg').style.width = pct+'%';
+  document.getElementById('heroPct').textContent = pct+'% pagado';
+  const pagadoMes = totalMes('abono');
+  const gastosMes = totalMes('gasto');
+  const ingresoMes = totalMes('ingreso');
+  document.getElementById('statPagadoMes').textContent = fmt(pagadoMes);
+  document.getElementById('statGastosMes').textContent = fmt(gastosMes);
+  document.getElementById('statIngresoMes').textContent = fmt(ingresoMes);
+  document.getElementById('statDispo').textContent = fmt(ingresoMes - gastosMes - pagadoMes);
+
+  // proximo objetivo = deuda viva de menor orden
+  const vivas = estado.deudas.filter(d=>d.saldo>1).sort((a,b)=>a.orden-b.orden);
+  const obj = vivas[0];
+  const cont = document.getElementById('proximoObjetivo');
+  if(obj){
+    const p = Math.max(0,Math.round((1-obj.saldo/DEUDAS_INIT.find(x=>x.id===obj.id).saldo)*100));
+    cont.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div><div style="font-size:16px;font-weight:700">${obj.nombre}</div>
+        <div style="font-size:12px;color:var(--gris)">Tasa ${obj.tasaEA}% E.A. · Cuota ${fmt(obj.cuota)}</div></div>
+        <div style="font-size:20px;font-weight:700">${fmt(obj.saldo)}</div>
+      </div>
+      <div class="deuda-prog"><div class="deuda-prog-fill" style="width:${p}%;background:var(--verde-vivo)"></div></div>
+      <button class="deuda-btn" onclick="abrirAbono('${obj.id}')">Registrar abono a esta deuda</button>`;
+  } else {
+    cont.innerHTML = `<div class="empty"><div class="empty-ico">🎉</div><div class="empty-txt">¡Felicitaciones! No tienes deudas activas.</div></div>`;
+  }
+}
+
+// ===== RENDER DEUDAS =====
+function renderDeudas(){
+  const vivas = estado.deudas.filter(d=>d.saldo>1);
+  document.getElementById('deudasActivas').textContent = vivas.length;
+  document.getElementById('cuotaMensual').textContent = fmtK(vivas.reduce((s,d)=>s+d.cuota,0));
+  const ordenadas = [...estado.deudas].sort((a,b)=>a.orden-b.orden);
+  const objId = vivas.sort((a,b)=>a.orden-b.orden)[0]?.id;
+  const cont = document.getElementById('listaDeudas');
+  cont.innerHTML = ordenadas.map(d=>{
+    const init = DEUDAS_INIT.find(x=>x.id===d.id).saldo;
+    const pagada = d.saldo<=1;
+    const p = pagada?100:Math.max(0,Math.round((1-d.saldo/init)*100));
+    const esObj = d.id===objId;
+    const colorBar = pagada?'var(--verde-vivo)':(d.tipo==='tarjeta'?'var(--rojo)':'var(--azul)');
+    return `<div class="deuda ${pagada?'pagada':''} ${esObj?'objetivo':''}">
+      ${esObj?'<div class="ataque-badge"></div>':''}
+      ${esObj?'<div class="objetivo-lbl">⚡ OBJETIVO ACTUAL</div>':''}
+      <div class="deuda-top">
+        <div><div class="deuda-nombre">${d.nombre}</div>
+        <div class="deuda-meta">Tasa ${d.tasaEA}% E.A. · Cuota ${fmt(d.cuota)}</div></div>
+        <span class="deuda-tag tag-${d.tipo}">${d.tipo}</span>
+      </div>
+      <div class="deuda-saldo">${fmt(Math.max(0,d.saldo))}</div>
+      <div class="deuda-prog"><div class="deuda-prog-fill" style="width:${p}%;background:${colorBar}"></div></div>
+      <div class="deuda-foot"><span>${p}% pagado</span><span>Inicial: ${fmtK(init)}</span></div>
+      ${pagada?'':`<button class="deuda-btn" onclick="abrirAbono('${d.id}')">Registrar abono</button>`}
+    </div>`;
+  }).join('');
+
+  // actualizar estado del boton de intereses
+  if(!estado.interesesAplicados) estado.interesesAplicados = [];
+  const btn = document.getElementById('btnIntereses');
+  const nota = document.getElementById('btnInteresesNota');
+  const meses=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const nombreMes = meses[new Date().getMonth()];
+  if(btn && estado.interesesAplicados.includes(mesActual())){
+    btn.textContent = '✓ Intereses de '+nombreMes+' ya aplicados';
+    btn.style.background = 'var(--verde-claro)';
+    btn.style.color = 'var(--verde-medio)';
+    btn.style.border = '1.5px solid #bfe6d6';
+    if(nota) nota.textContent = 'Listo por este mes. Vuelve el próximo mes cuando lleguen tus nuevos extractos.';
+  } else if(btn){
+    btn.textContent = '↻ Aplicar intereses de '+nombreMes;
+    btn.style.background = 'var(--blanco)';
+    btn.style.color = 'var(--ambar)';
+    btn.style.border = '1.5px solid #F0D5BC';
+    if(nota) nota.textContent = 'Úsalo una vez este mes, cuando lleguen tus nuevos extractos, para sumar los intereses que cobran los bancos.';
+  }
+}
+
+// ===== RENDER GASTOS =====
+function renderGastos(){
+  const movs = movsMes().filter(m=>m.tipo==='gasto');
+  // gastos hormiga: categorias comida/gaming/suscrip/otros con muchas transacciones pequeñas
+  const hormigaCats = ['comida','gaming','suscrip','otros'];
+  const hormigaTotal = movs.filter(m=>hormigaCats.includes(m.cat)).reduce((s,m)=>s+m.monto,0);
+  const hormigaCount = movs.filter(m=>hormigaCats.includes(m.cat)).length;
+  const alert = document.getElementById('hormigaAlert');
+  if(hormigaTotal>0 && hormigaCount>=2){
+    alert.style.display='block';
+    document.getElementById('hormigaTxt').innerHTML =
+      `Llevas <strong>${fmt(hormigaTotal)}</strong> este mes en ${hormigaCount} gastos pequeños (comida fuera, gaming, suscripciones). Si los recortas, ese dinero podría ir directo a tu deuda objetivo y acercarte a la meta.`;
+  } else {
+    alert.style.display='none';
+  }
+  // lista movimientos (todos los tipos, recientes primero)
+  const todos = [...estado.movimientos].sort((a,b)=>b.id-a.id).slice(0,40);
+  const cont = document.getElementById('listaMovs');
+  if(todos.length===0){
+    cont.innerHTML = `<div class="empty"><div class="empty-ico">📝</div><div class="empty-txt">Aún no has registrado movimientos.<br>Toca el botón + para empezar.</div></div>`;
+    return;
+  }
+  cont.innerHTML = todos.map(m=>{
+    let ico,color,nombre,cat,signo,clase;
+    if(m.tipo==='gasto'){const c=catById(m.cat);ico=c.icono;color=c.color;cat=c.nombre;signo='−';clase='';}
+    else if(m.tipo==='ingreso'){ico='💰';color='#1D9E75';cat='Ingreso';signo='+';clase='ingreso';}
+    else{const d=estado.deudas.find(x=>x.id===m.deudaId);ico='✅';color='#0F6E56';cat='Abono: '+(d?d.nombre:'deuda');signo='−';clase='';}
+    return `<div class="gasto-item">
+      <div class="gasto-icono" style="background:${color}1A">${ico}</div>
+      <div class="gasto-info">
+        <div class="gasto-nombre">${m.desc||cat}</div>
+        <div class="gasto-cat">${cat} · <span class="gasto-fecha">${m.fecha}</span></div>
+      </div>
+      <div class="gasto-monto ${clase}">${signo}${fmt(m.monto)}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderDonut(){
+  const movs = movsMes().filter(m=>m.tipo==='gasto');
+  const porCat = {};
+  movs.forEach(m=>{ porCat[m.cat]=(porCat[m.cat]||0)+m.monto; });
+  const cats = Object.keys(porCat).sort((a,b)=>porCat[b]-porCat[a]);
+  const total = Object.values(porCat).reduce((s,v)=>s+v,0);
+  const cv = document.getElementById('donutGastos');
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0,0,120,120);
+  const ley = document.getElementById('leyendaGastos');
+  if(total===0){
+    ctx.beginPath();ctx.arc(60,60,46,0,2*Math.PI);ctx.lineWidth=16;ctx.strokeStyle='#E4E6E2';ctx.stroke();
+    ley.innerHTML='<div style="font-size:12.5px;color:var(--gris-claro)">Sin gastos este mes todavía.</div>';
+    return;
+  }
+  let ang=-Math.PI/2;
+  cats.forEach(cid=>{
+    const c=catById(cid); const frac=porCat[cid]/total; const a2=ang+frac*2*Math.PI;
+    ctx.beginPath();ctx.arc(60,60,46,ang,a2);ctx.lineWidth=16;ctx.strokeStyle=c.color;ctx.lineCap='butt';ctx.stroke();
+    ang=a2;
+  });
+  ctx.fillStyle='#1A1E1C';ctx.font='600 15px -apple-system,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(fmtK(total),60,56); ctx.fillStyle='#6B7270';ctx.font='400 9px sans-serif';ctx.fillText('este mes',60,70);
+  ley.innerHTML = cats.map(cid=>{
+    const c=catById(cid); const p=Math.round(porCat[cid]/total*100);
+    return `<div class="ley-item"><span class="ley-dot" style="background:${c.color}"></span>${c.nombre}<span class="ley-val">${fmt(porCat[cid])} · ${p}%</span></div>`;
+  }).join('');
+}
+
+// ===== RENDER PLAN =====
+function renderPlan(){
+  const cont = document.getElementById('planMeses');
+  cont.innerHTML = PLAN_MESES.map(p=>{
+    const liqHTML = p.liq.map(l=>`<span style="display:inline-block;font-size:10px;font-weight:700;color:var(--verde-vivo);background:var(--verde-claro);padding:2px 8px;border-radius:99px;margin-top:5px;margin-right:4px">✓ ${l}</span>`).join('');
+    return `<div class="card" style="margin-bottom:10px;padding:14px 16px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:11px;font-weight:700;color:var(--gris-claro)">MES ${p.mes}</div>
+        <div style="font-size:14px;font-weight:700">${fmt(p.total)}</div>
+      </div>
+      <div style="font-size:14px;font-weight:600;margin-top:3px">⚡ Atacar: ${p.obj}</div>
+      ${liqHTML||''}
+      ${p.mes===14?'<div style="margin-top:8px;padding:8px 12px;background:var(--verde-claro);border-radius:10px;font-size:12px;color:var(--verde-medio);font-weight:600">🏁 ¡Libre de deudas! Recuperas tu ahorro Finecoop.</div>':''}
+    </div>`;
+  }).join('');
+}
+
+// ===== MODAL REGISTRO =====
+let tipoActual='gasto', catSel='mercado';
+function abrirRegistro(){
+  tipoActual='gasto'; catSel='mercado';
+  document.getElementById('modalTitle').textContent='Registrar movimiento';
+  setTipo('gasto');
+  document.getElementById('inMonto').value='';
+  document.getElementById('inDesc').value='';
+  renderCatGrid();
+  document.getElementById('modalReg').classList.add('show');
+  setTimeout(()=>document.getElementById('inMonto').focus(),300);
+}
+function abrirAbono(deudaId){
+  tipoActual='abono';
+  document.getElementById('modalTitle').textContent='Registrar abono';
+  setTipo('abono');
+  document.getElementById('inMonto').value='';
+  document.getElementById('inDesc').value='';
+  renderDeudaSelect();
+  document.getElementById('inDeuda').value=deudaId;
+  document.getElementById('modalReg').classList.add('show');
+  setTimeout(()=>document.getElementById('inMonto').focus(),300);
+}
+function cerrarModal(){ document.getElementById('modalReg').classList.remove('show'); }
+function setTipo(t){
+  tipoActual=t;
+  ['gasto','ingreso','abono'].forEach(x=>document.getElementById('seg'+x.charAt(0).toUpperCase()+x.slice(1)).classList.toggle('on',x===t));
+  document.getElementById('fldCat').style.display = t==='gasto'?'block':'none';
+  document.getElementById('fldDeuda').style.display = t==='abono'?'block':'none';
+  document.getElementById('fldDesc').style.display = t==='abono'?'none':'block';
+  if(t==='abono') renderDeudaSelect();
+  if(t==='gasto') renderCatGrid();
+}
+function renderCatGrid(){
+  document.getElementById('catGrid').innerHTML = CATEGORIAS.map(c=>
+    `<div class="cat-chip ${c.id===catSel?'sel':''}" onclick="selCat('${c.id}')">
+      <span class="cat-chip-ico">${c.icono}</span><span class="cat-chip-lbl">${c.nombre}</span></div>`).join('');
+}
+function selCat(id){ catSel=id; renderCatGrid(); }
+function renderDeudaSelect(){
+  document.getElementById('inDeuda').innerHTML = estado.deudas.filter(d=>d.saldo>1)
+    .sort((a,b)=>a.orden-b.orden)
+    .map(d=>`<option value="${d.id}">${d.nombre} — ${fmt(d.saldo)}</option>`).join('');
+}
+function guardarMov(){
+  const monto = parseFloat(document.getElementById('inMonto').value);
+  if(!monto || monto<=0){ toast('Ingresa un monto válido'); return; }
+  const mov = {id:Date.now(),tipo:tipoActual,monto,fecha:hoy()};
+  if(tipoActual==='gasto'){ mov.cat=catSel; mov.desc=document.getElementById('inDesc').value.trim(); }
+  else if(tipoActual==='ingreso'){ mov.desc=document.getElementById('inDesc').value.trim()||'Ingreso'; }
+  else if(tipoActual==='abono'){
+    const did=document.getElementById('inDeuda').value;
+    mov.deudaId=did;
+    const d=estado.deudas.find(x=>x.id===did);
+    if(d){ d.saldo=Math.max(0,d.saldo-monto); }
+    mov.desc='Abono '+(d?d.nombre:'');
+  }
+  estado.movimientos.push(mov);
+  guardarLocal();
+  subirMovimiento(mov);  // sube a la nube si está conectado
+  cerrarModal();
+  toast(tipoActual==='abono'?'Abono registrado 💪':'Movimiento guardado');
+  renderTodo();
+}
+
+// ===== APLICAR INTERESES MENSUALES (manual) =====
+function aplicarInteresesMes(){
+  let totalInteres = 0;
+  estado.deudas.forEach(d=>{
+    if(d.saldo>1){
+      const tasaMensual = Math.pow(1+d.tasaEA/100, 1/12)-1;
+      const interes = d.saldo*tasaMensual;
+      d.saldo += interes;
+      totalInteres += interes;
+    }
+  });
+  guardar(); renderTodo();
+  return totalInteres;
+}
+
+function confirmarIntereses(){
+  if(!estado.interesesAplicados) estado.interesesAplicados = [];
+  const mes = mesActual();
+  const vivas = estado.deudas.filter(d=>d.saldo>1);
+  if(vivas.length===0){ toast('No tienes deudas activas 🎉'); return; }
+
+  // nombre legible del mes actual
+  const meses=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const nombreMes = meses[new Date().getMonth()]+' '+new Date().getFullYear();
+
+  // ya se aplico este mes?
+  if(estado.interesesAplicados.includes(mes)){
+    alert('Ya aplicaste los intereses de '+nombreMes+' ✓\n\nLos intereses se suman una sola vez al mes. Vuelve el próximo mes, cuando lleguen tus nuevos extractos.');
+    return;
+  }
+
+  if(confirm('¿Aplicar los intereses de '+nombreMes+' a tus '+vivas.length+' deudas activas?\n\nEsto suma lo que los bancos te cobran de interés este mes. Solo se puede hacer una vez por mes.')){
+    estado.interesesAplicados.push(mes);
+    const totalInteres = aplicarInteresesMes();
+    guardarLocal();
+    subirInteresesNube(mes, totalInteres);  // sube a la nube si está conectado
+    toast('Se sumaron '+fmt(totalInteres)+' en intereses');
+    alert('Intereses de '+nombreMes+' aplicados ✓\n\nEste mes los bancos te sumaron '+fmt(totalInteres)+' en intereses sobre tus deudas.\n\nNo podrás volver a aplicarlos hasta el próximo mes. Por eso cada abono cuenta: mientras más rápido pagues, menos intereses pagas en total.');
+  }
+}
+function renderTodo(){ renderResumen(); renderDeudas(); renderGastos(); renderPlan(); if(document.getElementById('v-gastos').classList.contains('active')) renderDonut(); }
+
+// cerrar modal al tocar fondo
+document.getElementById('modalReg').addEventListener('click',e=>{ if(e.target.id==='modalReg') cerrarModal(); });
+
+// ===== PWA INSTALL =====
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); deferredPrompt=e; document.getElementById('installBanner').classList.add('show'); });
+function instalar(){ if(deferredPrompt){ deferredPrompt.prompt(); deferredPrompt.userChoice.then(()=>{ deferredPrompt=null; document.getElementById('installBanner').classList.remove('show'); }); } }
+
+// ===== SERVICE WORKER (offline) =====
+if('serviceWorker' in navigator){
+  const swCode = `self.addEventListener('install',e=>self.skipWaiting());self.addEventListener('activate',e=>self.clients.claim());self.addEventListener('fetch',e=>{e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)))});`;
+  const blob = new Blob([swCode],{type:'application/javascript'});
+  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
+}
+
+// =====================================================================
+//  SINCRONIZACION CON SUPABASE (capa nube, opcional)
+//  Patron hibrido: siempre guarda local; si hay nube, sincroniza.
+// =====================================================================
+
+// Iniciar sesion: usa sesion guardada o crea un usuario anonimo
+async function iniciarSesionNube(){
+  if(!sb) return false;
+  try{
+    // ¿ya hay sesion?
+    const { data:{ session } } = await sb.auth.getSession();
+    if(session){ usuarioActivo = session.user; return true; }
+    // si no, intentar sesion anonima (debes activarla en Supabase:
+    // Authentication -> Providers -> Anonymous sign-ins -> Enable)
+    const { data, error } = await sb.auth.signInAnonymously();
+    if(error){ console.warn("Login anonimo no disponible:", error.message); return false; }
+    usuarioActivo = data.user;
+    return true;
+  }catch(e){ console.warn("Error de sesion:", e); return false; }
+}
+
+// Bajar todos los datos de la nube y reemplazar el estado local
+async function bajarDeNube(){
+  if(!usandoNube()) return false;
+  try{
+    const uid = usuarioActivo.id;
+    const [dRes, mRes, iRes] = await Promise.all([
+      sb.from('deudas').select('*').eq('user_id',uid).order('orden_ataque'),
+      sb.from('movimientos').select('*').eq('user_id',uid).order('creado_en',{ascending:false}),
+      sb.from('intereses_aplicados').select('mes').eq('user_id',uid),
+    ]);
+    if(dRes.error||mRes.error||iRes.error){ console.warn("Error bajando datos"); return false; }
+
+    // si la nube no tiene deudas todavia, subir las locales (primer arranque)
+    if((dRes.data||[]).length===0){
+      await subirDeudasIniciales();
+      return await bajarDeNube();
+    }
+
+    estado.deudas = dRes.data.map(d=>({
+      id:d.id, nombre:d.nombre, tipo:d.tipo,
+      saldo:Number(d.saldo_actual), saldoInicial:Number(d.saldo_inicial),
+      cuota:Number(d.cuota_mensual), tasaEA:Number(d.tasa_ea), orden:d.orden_ataque
+    }));
+    estado.movimientos = (mRes.data||[]).map(m=>({
+      id:m.id, tipo:m.tipo, monto:Number(m.monto), desc:m.descripcion||'',
+      cat:m.categoria, deudaId:m.deuda_id, fecha:m.fecha
+    }));
+    estado.interesesAplicados = (iRes.data||[]).map(x=>x.mes);
+    guardarLocal();
+    renderTodo();
+    return true;
+  }catch(e){ console.warn("Error bajando de nube:", e); return false; }
+}
+
+// Subir las 9 deudas iniciales la primera vez
+async function subirDeudasIniciales(){
+  if(!usandoNube()) return;
+  const uid = usuarioActivo.id;
+  const filas = DEUDAS_INIT.map(d=>({
+    user_id:uid, nombre:d.nombre, tipo:d.tipo,
+    saldo_inicial:d.saldo, saldo_actual:d.saldo,
+    cuota_mensual:d.cuota, tasa_ea:d.tasaEA, orden_ataque:d.orden
+  }));
+  await sb.from('deudas').insert(filas);
+}
+
+// Subir un movimiento nuevo a la nube
+async function subirMovimiento(mov){
+  if(!usandoNube()) return;
+  try{
+    const fila = {
+      user_id:usuarioActivo.id, tipo:mov.tipo, monto:mov.monto,
+      descripcion:mov.desc||null, categoria:mov.cat||null,
+      deuda_id:mov.deudaId||null, fecha:mov.fecha
+    };
+    const { data } = await sb.from('movimientos').insert(fila).select().single();
+    // si fue abono, actualizar saldo de la deuda en la nube
+    if(mov.tipo==='abono' && mov.deudaId){
+      const d = estado.deudas.find(x=>x.id===mov.deudaId);
+      if(d){
+        await sb.from('deudas').update({
+          saldo_actual:d.saldo, activa:d.saldo>1
+        }).eq('id',mov.deudaId);
+      }
+    }
+    return data;
+  }catch(e){ console.warn("Error subiendo movimiento:", e); }
+}
+
+// Subir actualizacion de saldos tras aplicar intereses
+async function subirInteresesNube(mes, total){
+  if(!usandoNube()) return;
+  try{
+    await sb.from('intereses_aplicados').insert({
+      user_id:usuarioActivo.id, mes, total_interes:total
+    });
+    // actualizar todos los saldos
+    for(const d of estado.deudas){
+      if(d.saldo>0){
+        await sb.from('deudas').update({ saldo_actual:d.saldo }).eq('id',d.id);
+      }
+    }
+  }catch(e){ console.warn("Error subiendo intereses:", e); }
+}
+
+// Indicador visual de estado de conexion
+function mostrarEstadoNube(conectado){
+  let badge = document.getElementById('nubeBadge');
+  if(!badge){
+    badge = document.createElement('div');
+    badge.id='nubeBadge';
+    badge.style.cssText='position:fixed;top:calc(env(safe-area-inset-top) + 8px);right:12px;font-size:10px;font-weight:600;padding:4px 10px;border-radius:99px;z-index:60;transition:.3s';
+    document.body.appendChild(badge);
+  }
+  if(conectado){
+    badge.textContent='☁ Sincronizado';
+    badge.style.background='rgba(29,158,117,0.2)';
+    badge.style.color='#bfe6d6';
+  }else{
+    badge.textContent='📱 Solo en este equipo';
+    badge.style.background='rgba(255,255,255,0.15)';
+    badge.style.color='rgba(255,255,255,0.7)';
+  }
+}
+
+// ===== INIT =====
+async function init(){
+  renderTodo();  // pinta de inmediato con datos locales
+  if(sb){
+    const ok = await iniciarSesionNube();
+    if(ok){
+      await bajarDeNube();
+      mostrarEstadoNube(true);
+    }else{
+      mostrarEstadoNube(false);
+    }
+  }else{
+    mostrarEstadoNube(false);
+  }
+}
+init();
+
+</script>
+</body>
+</html>

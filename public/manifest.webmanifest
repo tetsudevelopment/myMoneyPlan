@@ -1,0 +1,20 @@
+{
+  "name": "Mi Plan — Salir de deudas",
+  "short_name": "Mi Plan",
+  "description": "Sal de tus deudas con la estrategia bola de nieve.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0F2A24",
+  "theme_color": "#0F2A24",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
