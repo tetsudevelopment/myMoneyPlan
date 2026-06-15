@@ -1,9 +1,8 @@
 // =====================================================================
 //  AppContext — estado central de Mi Plan.
-//  Mantiene el estado y el perfil, expone las acciones (registrar
-//  movimiento, aplicar intereses, login/registro, perfil) y orquesta el
-//  patrón local-first: escribe en local y pinta al instante; sincroniza con
-//  la nube en segundo plano.
+//  Estado + perfil + acciones (movimientos CRUD, deudas CRUD, intereses,
+//  auth, perfil, confirmaciones, onboarding). Patrón local-first: escribe
+//  en local y pinta al instante; sincroniza con la nube en segundo plano.
 // =====================================================================
 
 import {
@@ -17,30 +16,39 @@ import {
   type ReactNode,
 } from 'react'
 import { AuthScreen } from '../components/AuthScreen'
+import { ConfirmDialog, type ConfirmOpts } from '../components/ConfirmDialog'
+import { Onboarding } from '../components/Onboarding'
 import { hoy, mesActual } from '../lib/fechas'
 import { aplicarAbono, aplicarIntereses, deudasVivas } from '../lib/finanzas'
 import { fmt } from '../lib/format'
-import { hayNube } from '../lib/supabase'
+import { nuevoId } from '../lib/id'
 import { procesarImagen } from '../lib/imagen'
+import { hayNube } from '../lib/supabase'
 import {
+  actualizarDeudaNube,
   actualizarEmail,
+  actualizarMovimientoNube,
   actualizarPassword,
+  actualizarSaldoDeudaNube,
   bajarPerfil,
   borrarAvatarNube,
   cerrarSesion,
+  eliminarDeudaNube,
+  eliminarMovimientoNube,
   entrar as entrarSupabase,
   guardarPerfilNube,
+  insertarDeudaNube,
+  insertarMovimientoNube,
   registrarUsuario,
   restaurarSesion,
   sincronizarBajada,
   subirAvatarNube,
   subirIntereses,
-  subirMovimiento,
   usandoNube,
   usuarioActivo,
 } from '../lib/sync'
-import type { EstadoApp, Movimiento, Perfil, TipoMovimiento } from '../types'
-import { cargarLocal, guardarLocal } from './local'
+import type { Deuda, EstadoApp, Movimiento, Perfil, TipoMovimiento } from '../types'
+import { cargarLocal, estaOnboarded, guardarLocal, marcarOnboarded } from './local'
 import { cargarPerfil, guardarPerfil } from './perfil'
 
 export type EstadoNube = 'local' | 'verificando' | 'conectado' | 'error'
@@ -48,6 +56,13 @@ export type EstadoNube = 'local' | 'verificando' | 'conectado' | 'error'
 export interface NuevoMovimiento {
   tipo: TipoMovimiento
   monto: number
+  desc?: string
+  cat?: string
+  deudaId?: string
+}
+
+export interface CambiosMovimiento {
+  monto?: number
   desc?: string
   cat?: string
   deudaId?: string
@@ -62,9 +77,16 @@ interface AppContextValue {
   perfil: Perfil
   nube: EstadoNube
   sesionEmail: string | null
+  onboarded: boolean
+  // movimientos
   registrarMovimiento: (input: NuevoMovimiento) => void
-  aplicarInteresesMes: () => void
-  notificar: (mensaje: string) => void
+  editarMovimiento: (id: string | number, cambios: CambiosMovimiento) => void
+  eliminarMovimiento: (id: string | number) => Promise<void>
+  // deudas
+  agregarDeuda: (datos: Omit<Deuda, 'id'>) => void
+  editarDeuda: (id: string, cambios: Partial<Omit<Deuda, 'id'>>) => void
+  eliminarDeuda: (id: string) => Promise<void>
+  aplicarInteresesMes: () => Promise<void>
   // perfil
   actualizarPerfil: (cambios: { nombre?: string; telefono?: string }) => void
   actualizarAvatar: (file: File) => Promise<void>
@@ -77,6 +99,10 @@ interface AppContextValue {
   salirNube: () => Promise<void>
   abrirAuth: () => void
   cerrarAuth: () => void
+  // utilidades
+  notificar: (mensaje: string) => void
+  pedirConfirmacion: (opts: ConfirmOpts) => Promise<boolean>
+  completarOnboarding: (datos: { ingresoMensual: number; deudas: Omit<Deuda, 'id'>[] }) => void
 }
 
 const AppContext = createContext<AppContextValue | null>(null)
@@ -84,13 +110,17 @@ const AppContext = createContext<AppContextValue | null>(null)
 export function AppProvider({ children }: { children: ReactNode }) {
   const [estado, setEstado] = useState<EstadoApp>(() => cargarLocal())
   const [perfil, setPerfil] = useState<Perfil>(() => cargarPerfil())
-  const [nube, setNube] = useState<EstadoNube>('local')
+  const [nube, setNube] = useState<EstadoNube>(() => (hayNube() ? 'verificando' : 'local'))
   const [sesionEmail, setSesionEmail] = useState<string | null>(null)
   const [authAbierto, setAuthAbierto] = useState(false)
+  const [onboarded, setOnboarded] = useState<boolean>(() => estaOnboarded())
   const [toast, setToast] = useState<string | null>(null)
+  const [confirmState, setConfirmState] = useState<{
+    opts: ConfirmOpts
+    resolver: (b: boolean) => void
+  } | null>(null)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Refs frescas para usar dentro de callbacks async sin closures viejos.
   const estadoRef = useRef(estado)
   estadoRef.current = estado
   const perfilRef = useRef(perfil)
@@ -102,6 +132,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     toastTimer.current = setTimeout(() => setToast(null), 2400)
   }, [])
 
+  const pedirConfirmacion = useCallback(
+    (opts: ConfirmOpts) =>
+      new Promise<boolean>((resolver) => setConfirmState({ opts, resolver })),
+    [],
+  )
+  const responderConfirm = useCallback((valor: boolean) => {
+    setConfirmState((s) => {
+      if (s) s.resolver(valor)
+      return null
+    })
+  }, [])
+
   const aplicarDatosNube = useCallback((datos: Partial<EstadoApp> | null) => {
     if (datos && datos.deudas && datos.deudas.length > 0) {
       setEstado((prev) => {
@@ -109,11 +151,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         guardarLocal(merged)
         return merged
       })
+      marcarOnboarded()
+      setOnboarded(true)
     }
   }, [])
 
-  // Carga el perfil desde la tabla `perfiles`. Si no existe fila pero hay datos
-  // locales, los sube (auto-seed del perfil para la cuenta nueva).
   const cargarPerfilNube = useCallback(async () => {
     const datos = await bajarPerfil()
     if (datos) {
@@ -132,7 +174,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // --- Arranque: restaura sesión y baja de la nube; si no, pide login ---
+  // --- Arranque ---
   useEffect(() => {
     let cancelado = false
     if (!hayNube()) {
@@ -165,27 +207,158 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [aplicarDatosNube, cargarPerfilNube])
 
-  // --- Acciones de datos ---
+  // --- Movimientos ---
 
   const registrarMovimiento = useCallback(
     (input: NuevoMovimiento) => {
-      const mov: Movimiento = { id: Date.now(), fecha: hoy(), ...input }
-      setEstado((prev) => {
-        const deudas =
-          mov.tipo === 'abono' && mov.deudaId
-            ? aplicarAbono(prev.deudas, mov.deudaId, mov.monto)
-            : prev.deudas
-        const nuevo: EstadoApp = { ...prev, deudas, movimientos: [...prev.movimientos, mov] }
-        guardarLocal(nuevo)
-        return nuevo
-      })
-      void subirMovimiento(mov)
+      const mov: Movimiento = { id: nuevoId(), fecha: hoy(), ...input }
+      const prev = estadoRef.current
+      let deudas = prev.deudas
+      let saldoNuevo: number | null = null
+      if (mov.tipo === 'abono' && mov.deudaId) {
+        deudas = aplicarAbono(prev.deudas, mov.deudaId, mov.monto)
+        saldoNuevo = deudas.find((d) => d.id === mov.deudaId)?.saldo ?? null
+      }
+      const nuevo: EstadoApp = { ...prev, deudas, movimientos: [...prev.movimientos, mov] }
+      setEstado(nuevo)
+      guardarLocal(nuevo)
+      void insertarMovimientoNube(mov)
+      if (mov.tipo === 'abono' && mov.deudaId && saldoNuevo !== null) {
+        void actualizarSaldoDeudaNube(mov.deudaId, saldoNuevo)
+      }
       notificar(mov.tipo === 'abono' ? 'Abono registrado 💪' : 'Movimiento guardado')
     },
     [notificar],
   )
 
-  const aplicarInteresesMes = useCallback(() => {
+  const editarMovimiento = useCallback(
+    (id: string | number, cambios: CambiosMovimiento) => {
+      const prev = estadoRef.current
+      const viejo = prev.movimientos.find((m) => m.id === id)
+      if (!viejo) return
+      const nuevoMov: Movimiento = { ...viejo, ...cambios }
+      let deudas = prev.deudas
+      const afectadas = new Set<string>()
+      if (viejo.tipo === 'abono') {
+        deudas = deudas.map((d) => {
+          let saldo = d.saldo
+          if (d.id === viejo.deudaId) {
+            saldo += viejo.monto
+            afectadas.add(d.id)
+          }
+          if (d.id === nuevoMov.deudaId) {
+            saldo = Math.max(0, saldo - nuevoMov.monto)
+            afectadas.add(d.id)
+          }
+          return saldo === d.saldo ? d : { ...d, saldo }
+        })
+      }
+      const movimientos = prev.movimientos.map((m) => (m.id === id ? nuevoMov : m))
+      const nuevo: EstadoApp = { ...prev, deudas, movimientos }
+      setEstado(nuevo)
+      guardarLocal(nuevo)
+      void actualizarMovimientoNube(nuevoMov)
+      afectadas.forEach((did) => {
+        const s = deudas.find((d) => d.id === did)?.saldo
+        if (s !== undefined) void actualizarSaldoDeudaNube(did, s)
+      })
+      notificar('Movimiento actualizado')
+    },
+    [notificar],
+  )
+
+  const eliminarMovimiento = useCallback(
+    async (id: string | number) => {
+      const mov = estadoRef.current.movimientos.find((m) => m.id === id)
+      if (!mov) return
+      const ok = await pedirConfirmacion({
+        titulo: 'Eliminar movimiento',
+        mensaje:
+          mov.tipo === 'abono'
+            ? 'Se eliminará el abono y el saldo de la deuda volverá a subir.'
+            : '¿Seguro que quieres eliminar este movimiento?',
+        confirmar: 'Eliminar',
+        peligroso: true,
+      })
+      if (!ok) return
+      const prev = estadoRef.current
+      let deudas = prev.deudas
+      let saldoActualizado: { id: string; saldo: number } | null = null
+      if (mov.tipo === 'abono' && mov.deudaId) {
+        deudas = prev.deudas.map((d) =>
+          d.id === mov.deudaId ? { ...d, saldo: d.saldo + mov.monto } : d,
+        )
+        const s = deudas.find((d) => d.id === mov.deudaId)?.saldo
+        if (s !== undefined) saldoActualizado = { id: mov.deudaId, saldo: s }
+      }
+      const nuevo: EstadoApp = {
+        ...prev,
+        deudas,
+        movimientos: prev.movimientos.filter((m) => m.id !== id),
+      }
+      setEstado(nuevo)
+      guardarLocal(nuevo)
+      void eliminarMovimientoNube(String(id))
+      if (saldoActualizado) void actualizarSaldoDeudaNube(saldoActualizado.id, saldoActualizado.saldo)
+      notificar('Movimiento eliminado')
+    },
+    [pedirConfirmacion, notificar],
+  )
+
+  // --- Deudas ---
+
+  const agregarDeuda = useCallback(
+    (datos: Omit<Deuda, 'id'>) => {
+      const deuda: Deuda = { id: nuevoId(), ...datos }
+      const prev = estadoRef.current
+      const nuevo: EstadoApp = { ...prev, deudas: [...prev.deudas, deuda] }
+      setEstado(nuevo)
+      guardarLocal(nuevo)
+      void insertarDeudaNube(deuda)
+      notificar('Deuda agregada')
+    },
+    [notificar],
+  )
+
+  const editarDeuda = useCallback(
+    (id: string, cambios: Partial<Omit<Deuda, 'id'>>) => {
+      const prev = estadoRef.current
+      let actualizada: Deuda | undefined
+      const deudas = prev.deudas.map((d) => {
+        if (d.id !== id) return d
+        actualizada = { ...d, ...cambios }
+        return actualizada
+      })
+      const nuevo: EstadoApp = { ...prev, deudas }
+      setEstado(nuevo)
+      guardarLocal(nuevo)
+      if (actualizada) void actualizarDeudaNube(actualizada)
+      notificar('Deuda actualizada')
+    },
+    [notificar],
+  )
+
+  const eliminarDeuda = useCallback(
+    async (id: string) => {
+      const d = estadoRef.current.deudas.find((x) => x.id === id)
+      const ok = await pedirConfirmacion({
+        titulo: 'Eliminar deuda',
+        mensaje: `¿Eliminar "${d?.nombre ?? 'esta deuda'}"? Los movimientos ya registrados no se borran.`,
+        confirmar: 'Eliminar',
+        peligroso: true,
+      })
+      if (!ok) return
+      const prev = estadoRef.current
+      const nuevo: EstadoApp = { ...prev, deudas: prev.deudas.filter((x) => x.id !== id) }
+      setEstado(nuevo)
+      guardarLocal(nuevo)
+      void eliminarDeudaNube(id)
+      notificar('Deuda eliminada')
+    },
+    [pedirConfirmacion, notificar],
+  )
+
+  const aplicarInteresesMes = useCallback(async () => {
     const estadoActual = estadoRef.current
     const mes = mesActual()
     if (estadoActual.interesesAplicados.includes(mes)) {
@@ -196,6 +369,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       notificar('No tienes deudas activas 🎉')
       return
     }
+    const ok = await pedirConfirmacion({
+      titulo: 'Aplicar intereses del mes',
+      mensaje:
+        'Se sumarán los intereses a todas tus deudas activas. Solo se puede hacer una vez al mes y no se puede deshacer.',
+      confirmar: 'Aplicar intereses',
+    })
+    if (!ok) return
     const { deudas, totalInteres } = aplicarIntereses(estadoActual.deudas)
     const nuevo: EstadoApp = {
       ...estadoActual,
@@ -206,7 +386,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     guardarLocal(nuevo)
     void subirIntereses(mes, totalInteres, deudas)
     notificar('Se sumaron ' + fmt(totalInteres) + ' en intereses')
-  }, [notificar])
+  }, [pedirConfirmacion, notificar])
 
   // --- Perfil ---
 
@@ -214,7 +394,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const nuevo: Perfil = { ...perfilRef.current, ...cambios }
     setPerfil(nuevo)
     guardarPerfil(nuevo)
-    // nombre/teléfono se respaldan en la tabla `perfiles` si hay sesión
     void guardarPerfilNube({ nombre: nuevo.nombre, telefono: nuevo.telefono }).catch((e) =>
       console.warn('No se pudo respaldar el perfil:', e),
     )
@@ -313,15 +492,41 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const abrirAuth = useCallback(() => setAuthAbierto(true), [])
   const cerrarAuth = useCallback(() => setAuthAbierto(false), [])
 
+  // --- Onboarding ---
+
+  const completarOnboarding = useCallback(
+    (datos: { ingresoMensual: number; deudas: Omit<Deuda, 'id'>[] }) => {
+      const deudas: Deuda[] = datos.deudas.map((d) => ({ id: nuevoId(), ...d }))
+      const prev = estadoRef.current
+      const nuevo: EstadoApp = {
+        ...prev,
+        config: { ...prev.config, ingresoMensual: datos.ingresoMensual },
+        deudas,
+      }
+      setEstado(nuevo)
+      guardarLocal(nuevo)
+      if (usandoNube()) for (const d of deudas) void insertarDeudaNube(d)
+      marcarOnboarded()
+      setOnboarded(true)
+      if (deudas.length > 0) notificar('¡Todo listo! 🎯')
+    },
+    [notificar],
+  )
+
   const valor = useMemo<AppContextValue>(
     () => ({
       estado,
       perfil,
       nube,
       sesionEmail,
+      onboarded,
       registrarMovimiento,
+      editarMovimiento,
+      eliminarMovimiento,
+      agregarDeuda,
+      editarDeuda,
+      eliminarDeuda,
       aplicarInteresesMes,
-      notificar,
       actualizarPerfil,
       actualizarAvatar,
       quitarAvatar,
@@ -332,15 +537,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
       salirNube,
       abrirAuth,
       cerrarAuth,
+      notificar,
+      pedirConfirmacion,
+      completarOnboarding,
     }),
     [
       estado,
       perfil,
       nube,
       sesionEmail,
+      onboarded,
       registrarMovimiento,
+      editarMovimiento,
+      eliminarMovimiento,
+      agregarDeuda,
+      editarDeuda,
+      eliminarDeuda,
       aplicarInteresesMes,
-      notificar,
       actualizarPerfil,
       actualizarAvatar,
       quitarAvatar,
@@ -351,13 +564,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
       salirNube,
       abrirAuth,
       cerrarAuth,
+      notificar,
+      pedirConfirmacion,
+      completarOnboarding,
     ],
   )
+
+  const mostrarOnboarding = !onboarded && !authAbierto && nube !== 'verificando'
 
   return (
     <AppContext.Provider value={valor}>
       {children}
       {authAbierto && <AuthScreen />}
+      {mostrarOnboarding && <Onboarding />}
+      {confirmState && (
+        <ConfirmDialog opts={confirmState.opts} onResponder={responderConfirm} />
+      )}
       {toast && (
         <div className="fixed bottom-[calc(90px+env(safe-area-inset-bottom))] left-1/2 z-[200] -translate-x-1/2 whitespace-nowrap rounded-xl bg-verde-prof px-5 py-3 text-[13px] font-medium text-crema shadow-suave-lg">
           {toast}

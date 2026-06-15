@@ -1,18 +1,25 @@
+import { useState } from 'react'
 import { DonutChart } from '../components/DonutChart'
+import { ModalRegistro } from '../components/ModalRegistro'
 import { MovimientoItem } from '../components/MovimientoItem'
 import { mesActual } from '../lib/fechas'
 import { detectarHormiga, gastosPorCategoria } from '../lib/finanzas'
 import { fmt } from '../lib/format'
 import { useApp } from '../store/AppContext'
+import type { Movimiento } from '../types'
 
 export function Gastos() {
   const { estado } = useApp()
   const mes = mesActual()
   const porCat = gastosPorCategoria(estado.movimientos, mes)
   const hormiga = detectarHormiga(estado.movimientos, mes)
+  // Orden por fecha desc (los ids ya no son cronológicos). El sort estable
+  // conserva el orden de inserción dentro del mismo día.
   const recientes = [...estado.movimientos]
-    .sort((a, b) => Number(b.id) - Number(a.id))
+    .sort((a, b) => b.fecha.localeCompare(a.fecha))
     .slice(0, 40)
+
+  const [editar, setEditar] = useState<Movimiento | null>(null)
 
   return (
     <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-5">
@@ -57,11 +64,21 @@ export function Gastos() {
         ) : (
           <div className="rounded-card bg-white px-[18px] shadow-suave">
             {recientes.map((m) => (
-              <MovimientoItem key={String(m.id)} mov={m} deudas={estado.deudas} />
+              <MovimientoItem
+                key={String(m.id)}
+                mov={m}
+                deudas={estado.deudas}
+                onSelect={() => setEditar(m)}
+              />
             ))}
           </div>
         )}
+        <p className="mt-2 px-1 text-center text-[11px] text-gris-claro">
+          Toca un movimiento para editarlo o eliminarlo.
+        </p>
       </div>
+
+      <ModalRegistro abierto={!!editar} movEditar={editar} onCerrar={() => setEditar(null)} />
     </div>
   )
 }

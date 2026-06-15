@@ -5,7 +5,7 @@
 // =====================================================================
 
 import type { Deuda, Movimiento, TipoMovimiento } from '../types'
-import { CATEGORIAS_HORMIGA, DEUDA_INICIAL_TOTAL } from './constantes'
+import { CATEGORIAS_HORMIGA } from './constantes'
 
 // ---------- Intereses ----------
 
@@ -39,6 +39,11 @@ export function deudaTotalActual(deudas: Deuda[]): number {
   return deudas.reduce((s, d) => s + Math.max(0, d.saldo), 0)
 }
 
+/** Suma de los saldos iniciales (base del progreso total). */
+export function deudaInicialTotal(deudas: Deuda[]): number {
+  return deudas.reduce((s, d) => s + d.saldoInicial, 0)
+}
+
 /** % pagado de una deuda respecto a su saldo inicial (0-100). */
 export function pctPagadoDeuda(d: Deuda): number {
   if (d.saldo <= 1) return 100
@@ -47,7 +52,7 @@ export function pctPagadoDeuda(d: Deuda): number {
 }
 
 /** % pagado del total respecto a la deuda inicial total (0-100). */
-export function pctPagadoTotal(deudas: Deuda[], totalInicial = DEUDA_INICIAL_TOTAL): number {
+export function pctPagadoTotal(deudas: Deuda[], totalInicial = deudaInicialTotal(deudas)): number {
   if (totalInicial <= 0) return 0
   return Math.max(0, Math.round((1 - deudaTotalActual(deudas) / totalInicial) * 100))
 }

@@ -3,13 +3,15 @@ import { CATEGORIAS } from '../lib/constantes'
 import { deudasVivas } from '../lib/finanzas'
 import { fmt } from '../lib/format'
 import { useApp } from '../store/AppContext'
-import type { TipoMovimiento } from '../types'
+import type { Movimiento, TipoMovimiento } from '../types'
 
 interface Props {
   abierto: boolean
   onCerrar: () => void
-  /** Si viene, abre directo en modo abono con esta deuda preseleccionada. */
+  /** Abono con esta deuda preseleccionada (modo crear). */
   abonoDeudaId?: string | null
+  /** Si viene, el modal edita ese movimiento en vez de crear uno. */
+  movEditar?: Movimiento | null
 }
 
 const TIPOS: { id: TipoMovimiento; lbl: string }[] = [
@@ -18,9 +20,10 @@ const TIPOS: { id: TipoMovimiento; lbl: string }[] = [
   { id: 'abono', lbl: 'Abono deuda' },
 ]
 
-export function ModalRegistro({ abierto, onCerrar, abonoDeudaId }: Props) {
-  const { estado, registrarMovimiento, notificar } = useApp()
+export function ModalRegistro({ abierto, onCerrar, abonoDeudaId, movEditar }: Props) {
+  const { estado, registrarMovimiento, editarMovimiento, eliminarMovimiento, notificar } = useApp()
   const vivas = deudasVivas(estado.deudas)
+  const editando = !!movEditar
 
   const [tipo, setTipo] = useState<TipoMovimiento>('gasto')
   const [monto, setMonto] = useState('')
@@ -28,41 +31,63 @@ export function ModalRegistro({ abierto, onCerrar, abonoDeudaId }: Props) {
   const [cat, setCat] = useState('mercado')
   const [deudaId, setDeudaId] = useState('')
 
-  // Resetea el formulario cada vez que se abre.
   useEffect(() => {
     if (!abierto) return
-    if (abonoDeudaId) {
+    if (movEditar) {
+      setTipo(movEditar.tipo)
+      setMonto(String(Math.round(movEditar.monto)))
+      setDesc(movEditar.desc ?? '')
+      setCat(movEditar.cat ?? 'mercado')
+      setDeudaId(movEditar.deudaId ?? vivas[0]?.id ?? '')
+    } else if (abonoDeudaId) {
       setTipo('abono')
       setDeudaId(abonoDeudaId)
+      setMonto('')
+      setDesc('')
+      setCat('mercado')
     } else {
       setTipo('gasto')
       setDeudaId(vivas[0]?.id ?? '')
+      setMonto('')
+      setDesc('')
+      setCat('mercado')
     }
-    setMonto('')
-    setDesc('')
-    setCat('mercado')
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [abierto, abonoDeudaId])
+  }, [abierto, abonoDeudaId, movEditar])
 
   if (!abierto) return null
 
   const guardar = () => {
     const valor = parseFloat(monto)
-    if (!valor || valor <= 0) {
-      notificar('Ingresa un monto válido')
+    if (!valor || valor <= 0) return notificar('Ingresa un monto válido')
+
+    if (editando && movEditar) {
+      const cambios =
+        tipo === 'gasto'
+          ? { monto: valor, desc: desc.trim(), cat }
+          : tipo === 'ingreso'
+            ? { monto: valor, desc: desc.trim() || 'Ingreso' }
+            : { monto: valor, deudaId }
+      if (tipo === 'abono' && !deudaId) return notificar('Elige una deuda')
+      editarMovimiento(movEditar.id, cambios)
+      onCerrar()
       return
     }
+
     if (tipo === 'gasto') registrarMovimiento({ tipo, monto: valor, desc: desc.trim(), cat })
     else if (tipo === 'ingreso')
       registrarMovimiento({ tipo, monto: valor, desc: desc.trim() || 'Ingreso' })
     else {
-      if (!deudaId) {
-        notificar('Elige una deuda')
-        return
-      }
+      if (!deudaId) return notificar('Elige una deuda')
       registrarMovimiento({ tipo, monto: valor, deudaId })
     }
     onCerrar()
+  }
+
+  const borrar = async () => {
+    if (!movEditar) return
+    onCerrar()
+    await eliminarMovimiento(movEditar.id)
   }
 
   return (
@@ -73,27 +98,28 @@ export function ModalRegistro({ abierto, onCerrar, abonoDeudaId }: Props) {
       <div className="mx-auto max-h-[88vh] w-full max-w-app overflow-y-auto rounded-t-[24px] bg-crema px-[18px] pb-[calc(22px+env(safe-area-inset-bottom))] pt-[22px] lg:max-w-md lg:rounded-[24px] lg:pb-[22px] lg:shadow-suave-lg">
         <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-linea lg:hidden" />
         <h3 className="mb-4 text-lg font-bold">
-          {tipo === 'abono' ? 'Registrar abono' : 'Registrar movimiento'}
+          {editando ? 'Editar movimiento' : tipo === 'abono' ? 'Registrar abono' : 'Registrar movimiento'}
         </h3>
 
-        {/* Selector de tipo */}
-        <div className="mb-3.5 flex gap-2">
-          {TIPOS.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTipo(t.id)}
-              className={`flex-1 rounded-xl border-[1.5px] py-3 text-sm font-semibold transition ${
-                tipo === t.id
-                  ? 'border-verde-prof bg-verde-prof text-crema'
-                  : 'border-linea bg-white text-gris'
-              }`}
-            >
-              {t.lbl}
-            </button>
-          ))}
-        </div>
+        {/* Selector de tipo (bloqueado al editar) */}
+        {!editando && (
+          <div className="mb-3.5 flex gap-2">
+            {TIPOS.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setTipo(t.id)}
+                className={`flex-1 rounded-xl border-[1.5px] py-3 text-sm font-semibold transition ${
+                  tipo === t.id
+                    ? 'border-verde-prof bg-verde-prof text-crema'
+                    : 'border-linea bg-white text-gris'
+                }`}
+              >
+                {t.lbl}
+              </button>
+            ))}
+          </div>
+        )}
 
-        {/* Monto */}
         <Campo label="Monto">
           <input
             type="number"
@@ -106,7 +132,6 @@ export function ModalRegistro({ abierto, onCerrar, abonoDeudaId }: Props) {
           />
         </Campo>
 
-        {/* Descripción (gasto / ingreso) */}
         {tipo !== 'abono' && (
           <Campo label="Descripción">
             <input
@@ -119,7 +144,6 @@ export function ModalRegistro({ abierto, onCerrar, abonoDeudaId }: Props) {
           </Campo>
         )}
 
-        {/* Categoría (solo gasto) */}
         {tipo === 'gasto' && (
           <Campo label="Categoría">
             <div className="grid grid-cols-[repeat(auto-fill,minmax(64px,1fr))] gap-2">
@@ -139,7 +163,6 @@ export function ModalRegistro({ abierto, onCerrar, abonoDeudaId }: Props) {
           </Campo>
         )}
 
-        {/* Deuda (solo abono) */}
         {tipo === 'abono' && (
           <Campo label="¿A qué deuda?">
             <select
@@ -160,8 +183,17 @@ export function ModalRegistro({ abierto, onCerrar, abonoDeudaId }: Props) {
           onClick={guardar}
           className="w-full rounded-[13px] bg-verde-prof py-[15px] text-[15px] font-semibold text-crema transition active:scale-[.98]"
         >
-          Guardar
+          {editando ? 'Guardar cambios' : 'Guardar'}
         </button>
+
+        {editando && (
+          <button
+            onClick={borrar}
+            className="mt-2.5 w-full rounded-[13px] border-[1.5px] border-linea bg-white py-3 text-sm font-semibold text-rojo transition active:scale-[.98]"
+          >
+            Eliminar movimiento
+          </button>
+        )}
       </div>
     </div>
   )

@@ -5,7 +5,15 @@ import type { Deuda, Movimiento } from '../types'
 const catById = (id?: string) =>
   CATEGORIAS.find((c) => c.id === id) ?? CATEGORIAS[CATEGORIAS.length - 1]
 
-export function MovimientoItem({ mov, deudas }: { mov: Movimiento; deudas: Deuda[] }) {
+export function MovimientoItem({
+  mov,
+  deudas,
+  onSelect,
+}: {
+  mov: Movimiento
+  deudas: Deuda[]
+  onSelect?: () => void
+}) {
   let ico: string
   let color: string
   let etiqueta: string
@@ -33,7 +41,12 @@ export function MovimientoItem({ mov, deudas }: { mov: Movimiento; deudas: Deuda
   }
 
   return (
-    <div className="flex items-center gap-3 border-b border-linea py-2.5 last:border-b-0">
+    <button
+      type="button"
+      onClick={onSelect}
+      disabled={!onSelect}
+      className="flex w-full items-center gap-3 border-b border-linea py-2.5 text-left transition last:border-b-0 enabled:hover:bg-crema/60 enabled:active:scale-[.995]"
+    >
       <div
         className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-[19px]"
         style={{ background: color + '1A' }}
@@ -50,6 +63,6 @@ export function MovimientoItem({ mov, deudas }: { mov: Movimiento; deudas: Deuda
         {signo}
         {fmt(mov.monto)}
       </div>
-    </div>
+    </button>
   )
 }

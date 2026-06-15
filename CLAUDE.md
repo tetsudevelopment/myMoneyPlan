@@ -323,6 +323,26 @@ Estado actual del proyecto y decisiones tomadas: ver §"Estado" abajo, manténlo
   - **Avatar ahora SÍ sincroniza** entre dispositivos (vive en Storage). En modo
     solo-local sigue como dataURL en localStorage.
   - Validado: typecheck OK, 25/25 tests, build OK.
+- **2026-06-14 — Fase 6 (mejoras 1-4) COMPLETA.** Roadmap en `docs/ROADMAP.md`.
+  - **IDs uuid de cliente** (`lib/id.ts` `nuevoId()`): deudas y movimientos nuevos usan
+    el MISMO id en local y nube → editar/borrar fiable. Se **dejó de usar el RPC
+    `registrar_abono`**; el abono ahora es insert + update de saldo (ids explícitos).
+  - **1. Editar/borrar movimientos:** `editarMovimiento`/`eliminarMovimiento` en
+    AppContext (revierte saldo al tocar abonos). UI: tocar un movimiento en Gastos abre
+    `ModalRegistro` en modo edición (con botón Eliminar). Orden por `fecha` desc.
+  - **2. Deudas CRUD:** `agregarDeuda`/`editarDeuda`/`eliminarDeuda` + `ModalDeuda`.
+    DeudaCard tiene botón ✏️; Deudas tiene "+ Agregar deuda" y estado vacío. Sync:
+    `insertarDeudaNube`/`actualizarDeudaNube`/`eliminarDeudaNube`.
+  - **3. Confirmaciones:** `ConfirmDialog` + `pedirConfirmacion(opts): Promise<bool>` en
+    AppContext (usado en aplicar intereses, borrar movimiento/deuda).
+  - **4. Onboarding:** `estadoInicial()` ahora **vacío** (sin deudas de ejemplo).
+    `Onboarding.tsx` (bienvenida → ingreso → elegir: agregar deudas / ejemplo / vacío).
+    Flag `miplan_onboarded` en localStorage; se marca onboarded al bajar deudas de la
+    nube. `% pagado total` ahora usa `deudaInicialTotal(deudas)` (no la constante fija).
+  - Nota tests: se siembra localStorage (onboarded + DEUDAS_INIT) en `beforeEach` para
+    que el dashboard renderice; hay test del onboarding.
+  - Validado: typecheck OK, 26/26 tests, build OK (100 módulos), dev server 200.
+  - Commit inicial del repo: `f4fbf62` (master). `.env` excluido.
 - **Decisiones tomadas:**
   - **Auth = email/OTP** (no anónimo). Un solo dueño; el seed del SQL es de su UID. Ver
     ARCHITECTURE.md §4.

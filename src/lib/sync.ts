@@ -229,26 +229,114 @@ export async function sincronizarBajada(
   return datos
 }
 
-/** Sube un movimiento. Para abonos usa el RPC atómico registrar_abono. */
-export async function subirMovimiento(mov: Movimiento): Promise<void> {
+// ---------- Movimientos (CRUD en la nube) ----------
+// Se insertan con el id del cliente (uuid) para que local y nube coincidan,
+// lo que permite editar y borrar de forma fiable.
+
+const filaMov = (mov: Movimiento) => ({
+  id: String(mov.id),
+  tipo: mov.tipo,
+  monto: mov.monto,
+  descripcion: mov.desc ?? null,
+  categoria: mov.cat ?? null,
+  deuda_id: mov.deudaId ?? null,
+  fecha: mov.fecha,
+})
+
+/** Inserta un movimiento nuevo en la nube. */
+export async function insertarMovimientoNube(mov: Movimiento): Promise<void> {
   if (!supabase || !usuario) return
   try {
-    if (mov.tipo === 'abono' && mov.deudaId) {
-      // RPC: inserta el movimiento y descuenta el saldo en una transacción.
-      await supabase.rpc('registrar_abono', { p_deuda: mov.deudaId, p_monto: mov.monto })
-    } else {
-      await supabase.from('movimientos').insert({
-        user_id: usuario.id,
-        tipo: mov.tipo,
+    await supabase.from('movimientos').insert({ user_id: usuario.id, ...filaMov(mov) })
+  } catch (e) {
+    console.warn('Error insertando movimiento:', e)
+  }
+}
+
+/** Actualiza un movimiento existente. */
+export async function actualizarMovimientoNube(mov: Movimiento): Promise<void> {
+  if (!supabase || !usuario) return
+  try {
+    await supabase
+      .from('movimientos')
+      .update({
         monto: mov.monto,
         descripcion: mov.desc ?? null,
         categoria: mov.cat ?? null,
         deuda_id: mov.deudaId ?? null,
-        fecha: mov.fecha,
       })
-    }
+      .eq('id', String(mov.id))
   } catch (e) {
-    console.warn('Error subiendo movimiento:', e)
+    console.warn('Error actualizando movimiento:', e)
+  }
+}
+
+/** Borra un movimiento por id. */
+export async function eliminarMovimientoNube(id: string): Promise<void> {
+  if (!supabase || !usuario) return
+  try {
+    await supabase.from('movimientos').delete().eq('id', id)
+  } catch (e) {
+    console.warn('Error eliminando movimiento:', e)
+  }
+}
+
+/** Actualiza el saldo (y estado activa) de una deuda. */
+export async function actualizarSaldoDeudaNube(deudaId: string, saldo: number): Promise<void> {
+  if (!supabase || !usuario) return
+  try {
+    await supabase
+      .from('deudas')
+      .update({ saldo_actual: saldo, activa: saldo > 1 })
+      .eq('id', deudaId)
+  } catch (e) {
+    console.warn('Error actualizando saldo de deuda:', e)
+  }
+}
+
+// ---------- Deudas (CRUD en la nube) ----------
+
+const filaDeuda = (d: Deuda) => ({
+  id: d.id,
+  nombre: d.nombre,
+  tipo: d.tipo,
+  saldo_inicial: d.saldoInicial,
+  saldo_actual: d.saldo,
+  cuota_mensual: d.cuota,
+  tasa_ea: d.tasaEA,
+  orden_ataque: d.orden,
+  activa: d.saldo > 1,
+})
+
+/** Inserta una deuda nueva (con el id del cliente). */
+export async function insertarDeudaNube(deuda: Deuda): Promise<void> {
+  if (!supabase || !usuario) return
+  try {
+    await supabase.from('deudas').insert({ user_id: usuario.id, ...filaDeuda(deuda) })
+  } catch (e) {
+    console.warn('Error insertando deuda:', e)
+  }
+}
+
+/** Actualiza todos los campos de una deuda. */
+export async function actualizarDeudaNube(deuda: Deuda): Promise<void> {
+  if (!supabase || !usuario) return
+  try {
+    const { id: _id, ...campos } = filaDeuda(deuda)
+    void _id
+    await supabase.from('deudas').update(campos).eq('id', deuda.id)
+  } catch (e) {
+    console.warn('Error actualizando deuda:', e)
+  }
+}
+
+/** Borra una deuda por id. */
+export async function eliminarDeudaNube(id: string): Promise<void> {
+  if (!supabase || !usuario) return
+  try {
+    await supabase.from('deudas').delete().eq('id', id)
+  } catch (e) {
+    console.warn('Error eliminando deuda:', e)
   }
 }
 

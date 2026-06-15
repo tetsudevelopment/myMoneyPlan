@@ -1,13 +1,20 @@
 import { InstallBanner } from '../components/InstallBanner'
-import { DEUDA_INICIAL_TOTAL } from '../lib/constantes'
 import { mesActual } from '../lib/fechas'
-import { deudaObjetivo, deudaTotalActual, pctPagadoDeuda, pctPagadoTotal, statsDelMes } from '../lib/finanzas'
+import {
+  deudaInicialTotal,
+  deudaObjetivo,
+  deudaTotalActual,
+  pctPagadoDeuda,
+  pctPagadoTotal,
+  statsDelMes,
+} from '../lib/finanzas'
 import { fmt } from '../lib/format'
 import { useApp } from '../store/AppContext'
 
 export function Inicio({ onAbonar }: { onAbonar: (deudaId: string) => void }) {
   const { estado } = useApp()
   const total = deudaTotalActual(estado.deudas)
+  const inicial = deudaInicialTotal(estado.deudas)
   const pct = pctPagadoTotal(estado.deudas)
   const stats = statsDelMes(estado.movimientos, mesActual())
   const objetivo = deudaObjetivo(estado.deudas)
@@ -24,7 +31,7 @@ export function Inicio({ onAbonar }: { onAbonar: (deudaId: string) => void }) {
           <p className="my-1 text-[32px] font-bold leading-none tracking-tight lg:text-[40px]">
             {fmt(total)}
           </p>
-          <p className="text-[12.5px] opacity-65">de {fmt(DEUDA_INICIAL_TOTAL)} inicial</p>
+          <p className="text-[12.5px] opacity-65">de {fmt(inicial)} inicial</p>
           <div className="mt-4 h-[7px] overflow-hidden rounded-full bg-white/20">
             <div className="h-full rounded-full bg-verde-vivo transition-all duration-700" style={{ width: `${pct}%` }} />
           </div>

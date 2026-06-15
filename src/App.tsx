@@ -42,7 +42,11 @@ function Shell() {
   }
   const irA = (v: Vista) => {
     setVista(v)
-    window.scrollTo(0, 0)
+    try {
+      window.scrollTo(0, 0)
+    } catch {
+      /* jsdom u otros entornos sin scrollTo */
+    }
   }
 
   const [titulo, sub] = TITULOS[vista]

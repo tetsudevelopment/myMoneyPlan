@@ -3,15 +3,16 @@
 //  Guarda el estado completo en localStorage.
 // =====================================================================
 
-import { CONFIG_DEFAULT, DEUDAS_INIT } from '../lib/constantes'
+import { CONFIG_DEFAULT } from '../lib/constantes'
 import type { EstadoApp } from '../types'
 
 const KEY = 'miplan_v1'
+const KEY_ONBOARDED = 'miplan_onboarded'
 
-/** Estado por defecto al primer arranque (modo solo-local). */
+/** Estado por defecto al primer arranque: vacío (el onboarding lo llena). */
 export function estadoInicial(): EstadoApp {
   return {
-    deudas: structuredClone(DEUDAS_INIT),
+    deudas: [],
     movimientos: [],
     interesesAplicados: [],
     config: { ...CONFIG_DEFAULT },
@@ -40,5 +41,24 @@ export function guardarLocal(estado: EstadoApp): void {
     localStorage.setItem(KEY, JSON.stringify(estado))
   } catch {
     /* almacenamiento lleno o no disponible: la app sigue en memoria */
+  }
+}
+
+// ---------- Onboarding ----------
+
+/** true si el usuario ya pasó por la configuración inicial. */
+export function estaOnboarded(): boolean {
+  try {
+    return localStorage.getItem(KEY_ONBOARDED) === '1'
+  } catch {
+    return false
+  }
+}
+
+export function marcarOnboarded(): void {
+  try {
+    localStorage.setItem(KEY_ONBOARDED, '1')
+  } catch {
+    /* ignora */
   }
 }
