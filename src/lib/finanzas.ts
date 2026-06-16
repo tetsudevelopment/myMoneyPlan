@@ -194,6 +194,8 @@ export interface MesPlan {
   objetivo: string
   /** Cuánto se pagó ese mes en total. */
   pago: number
+  /** Deuda total que queda al cerrar ese mes. */
+  restante: number
   /** Deudas que quedan liquidadas ese mes. */
   liquidadas: string[]
 }
@@ -246,7 +248,8 @@ export function generarPlan(
       liquidar(t)
     }
 
-    plan.push({ mes, objetivo, pago: presupuestoMensual - pool, liquidadas })
+    const restante = activas.reduce((s, d) => s + Math.max(0, d.saldo), 0)
+    plan.push({ mes, objetivo, pago: presupuestoMensual - pool, restante, liquidadas })
   }
 
   return plan

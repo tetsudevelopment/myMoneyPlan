@@ -193,6 +193,9 @@ describe('generarPlan (snowball)', () => {
     const ultimas = plan.flatMap((m) => m.liquidadas)
     expect(ultimas).toContain('A')
     expect(ultimas).toContain('B')
+    // El saldo restante baja hasta 0 al final
+    expect(plan[plan.length - 1].restante).toBeLessThanOrEqual(1)
+    expect(plan[0].restante).toBeGreaterThan(plan[plan.length - 1].restante)
   })
   it('ataca primero la deuda de menor orden', () => {
     const plan = generarPlan(ds, 600)

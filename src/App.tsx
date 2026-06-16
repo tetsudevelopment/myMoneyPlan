@@ -15,7 +15,7 @@ const TITULOS: Record<Vista, [string, string]> = {
   resumen: ['Resumen', 'Tu camino a cero deudas'],
   deudas: ['Mis deudas', 'Ordenadas por estrategia de pago'],
   gastos: ['Gastos', '¿En qué se va tu dinero?'],
-  plan: ['Mi plan', '14 meses para ser libre'],
+  plan: ['Mi plan', 'Tu estrategia para salir de deudas'],
   perfil: ['Mi perfil', 'Tu cuenta y preferencias'],
 }
 
