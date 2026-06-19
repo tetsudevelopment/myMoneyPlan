@@ -48,8 +48,8 @@ import {
   usuarioActivo,
 } from '../lib/sync'
 import type { Deuda, EstadoApp, Movimiento, Perfil, TipoMovimiento } from '../types'
-import { cargarLocal, estaOnboarded, guardarLocal, marcarOnboarded } from './local'
-import { cargarPerfil, guardarPerfil } from './perfil'
+import { cargarLocal, estadoInicial, estaOnboarded, guardarLocal, marcarOnboarded } from './local'
+import { cargarPerfil, guardarPerfil, perfilInicial } from './perfil'
 
 export type EstadoNube = 'local' | 'verificando' | 'conectado' | 'error'
 
@@ -167,22 +167,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  // El perfil de la nube manda: NO heredamos nada del usuario anterior. Una
+  // cuenta sin perfil queda vacía (evita fuga de foto/datos entre usuarios).
   const cargarPerfilNube = useCallback(async () => {
     const datos = await bajarPerfil()
-    if (datos) {
-      const fusionado: Perfil = {
-        nombre: datos.nombre || perfilRef.current.nombre,
-        telefono: datos.telefono || perfilRef.current.telefono,
-        avatar: datos.avatar ?? perfilRef.current.avatar,
-      }
-      setPerfil(fusionado)
-      guardarPerfil(fusionado)
-    } else {
-      const p = perfilRef.current
-      if (p.nombre || p.telefono) {
-        await guardarPerfilNube({ nombre: p.nombre, telefono: p.telefono }).catch(() => {})
-      }
-    }
+    const nuevo: Perfil = datos
+      ? { nombre: datos.nombre ?? '', telefono: datos.telefono ?? '', avatar: datos.avatar ?? null }
+      : perfilInicial()
+    setPerfil(nuevo)
+    guardarPerfil(nuevo)
   }, [])
 
   // --- Arranque ---
@@ -497,6 +490,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await cerrarSesion()
     setSesionEmail(null)
     setNube('local')
+    // Limpiar datos del usuario anterior (evita fuga entre cuentas).
+    const estadoLimpio = estadoInicial()
+    setEstado(estadoLimpio)
+    guardarLocal(estadoLimpio)
+    const perfilLimpio = perfilInicial()
+    setPerfil(perfilLimpio)
+    guardarPerfil(perfilLimpio)
     // Tras cerrar sesión, volver a la pantalla de login (si hay nube configurada).
     if (hayNube()) setAuthAbierto(true)
     notificar('Sesión cerrada')
