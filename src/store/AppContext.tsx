@@ -30,6 +30,7 @@ import {
   actualizarMovimientoNube,
   actualizarPassword,
   actualizarSaldoDeudaNube,
+  bajarDeNube,
   bajarPerfil,
   borrarAvatarNube,
   cerrarSesion,
@@ -41,7 +42,6 @@ import {
   insertarMovimientoNube,
   registrarUsuario,
   restaurarSesion,
-  sincronizarBajada,
   subirAvatarNube,
   subirIntereses,
   usandoNube,
@@ -144,13 +144,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
+  // La nube es la fuente de verdad cuando hay sesión: reemplaza SIEMPRE el estado
+  // local con lo del usuario (aunque venga vacío), para no mostrar deudas locales
+  // o de ejemplo que no le pertenecen.
   const aplicarDatosNube = useCallback((datos: Partial<EstadoApp> | null) => {
-    if (datos && datos.deudas && datos.deudas.length > 0) {
-      setEstado((prev) => {
-        const merged = { ...prev, ...datos } as EstadoApp
-        guardarLocal(merged)
-        return merged
-      })
+    if (!datos) return
+    setEstado((prev) => {
+      const merged: EstadoApp = {
+        ...prev,
+        deudas: datos.deudas ?? [],
+        movimientos: datos.movimientos ?? [],
+        interesesAplicados: datos.interesesAplicados ?? [],
+        ...(datos.config ? { config: datos.config } : {}),
+      }
+      guardarLocal(merged)
+      return merged
+    })
+    // Si ya tiene deudas en la nube, no mostramos el onboarding.
+    if (datos.deudas && datos.deudas.length > 0) {
       marcarOnboarded()
       setOnboarded(true)
     }
@@ -192,7 +203,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       setSesionEmail(usuarioActivo()?.email ?? null)
       await cargarPerfilNube()
-      const datos = await sincronizarBajada(estadoRef.current.deudas)
+      const datos = await bajarDeNube()
       if (cancelado) return
       aplicarDatosNube(datos)
       setNube('conectado')
@@ -451,7 +462,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setSesionEmail(usuarioActivo()?.email ?? emailFallback)
       setNube('verificando')
       await cargarPerfilNube()
-      const datos = await sincronizarBajada(estadoRef.current.deudas)
+      const datos = await bajarDeNube()
       aplicarDatosNube(datos)
       setNube('conectado')
       setAuthAbierto(false)

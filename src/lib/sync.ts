@@ -198,36 +198,9 @@ export async function bajarDeNube(): Promise<Partial<EstadoApp> | null> {
   }
 }
 
-/** Siembra en la nube las deudas dadas (primer arranque de una cuenta vacía). */
-export async function subirDeudasIniciales(deudas: Deuda[]): Promise<void> {
-  if (!supabase || !usuario) return
-  const filas = deudas.map((d) => ({
-    user_id: usuario!.id,
-    nombre: d.nombre,
-    tipo: d.tipo,
-    saldo_inicial: d.saldoInicial,
-    saldo_actual: d.saldo,
-    cuota_mensual: d.cuota,
-    tasa_ea: d.tasaEA,
-    orden_ataque: d.orden,
-  }))
-  await supabase.from('deudas').insert(filas)
-}
-
-/**
- * Baja el estado de la nube. Si la cuenta no tiene deudas todavía, las siembra
- * con `localDeudas` y vuelve a bajar (así cada cuenta nueva queda lista).
- */
-export async function sincronizarBajada(
-  localDeudas: Deuda[],
-): Promise<Partial<EstadoApp> | null> {
-  let datos = await bajarDeNube()
-  if (datos && (!datos.deudas || datos.deudas.length === 0)) {
-    await subirDeudasIniciales(localDeudas)
-    datos = await bajarDeNube()
-  }
-  return datos
-}
+// Nota: ya NO se auto-siembran deudas de ejemplo en cuentas vacías. Cada usuario
+// ve únicamente sus propias deudas (cloud = fuente de verdad). Una cuenta nueva
+// arranca vacía y agrega sus deudas vía onboarding / "Agregar deuda".
 
 // ---------- Movimientos (CRUD en la nube) ----------
 // Se insertan con el id del cliente (uuid) para que local y nube coincidan,
