@@ -40,6 +40,12 @@ import {
   guardarPerfilNube,
   insertarDeudaNube,
   insertarMovimientoNube,
+  insertarBolsilloNube,
+  actualizarBolsilloNube,
+  eliminarBolsilloNube,
+  insertarPrestamoNube,
+  actualizarPrestamoNube,
+  eliminarPrestamoNube,
   registrarUsuario,
   restaurarSesion,
   subirAvatarNube,
@@ -47,7 +53,7 @@ import {
   usandoNube,
   usuarioActivo,
 } from '../lib/sync'
-import type { Deuda, EstadoApp, Movimiento, Perfil, TipoMovimiento } from '../types'
+import type { Bolsillo, Deuda, EstadoApp, Movimiento, Perfil, Prestamo, TipoMovimiento } from '../types'
 import { cargarLocal, estadoInicial, estaOnboarded, guardarLocal, marcarOnboarded } from './local'
 import { cargarPerfil, guardarPerfil, perfilInicial } from './perfil'
 
@@ -87,6 +93,15 @@ interface AppContextValue {
   editarDeuda: (id: string, cambios: Partial<Omit<Deuda, 'id'>>) => void
   eliminarDeuda: (id: string) => Promise<void>
   aplicarInteresesMes: () => Promise<void>
+  // bolsillos (ahorro)
+  agregarBolsillo: (nombre: string, saldo: number) => void
+  ajustarBolsillo: (id: string, delta: number) => void
+  editarBolsillo: (id: string, nombre: string) => void
+  eliminarBolsillo: (id: string) => Promise<void>
+  // préstamos (dinero prestado)
+  agregarPrestamo: (datos: { persona: string; monto: number; fecha: string; nota?: string }) => void
+  abonarPrestamo: (id: string, monto: number) => void
+  eliminarPrestamo: (id: string) => Promise<void>
   // perfil
   actualizarPerfil: (cambios: { nombre?: string; telefono?: string }) => void
   actualizarAvatar: (file: File) => Promise<void>
@@ -155,6 +170,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         deudas: datos.deudas ?? [],
         movimientos: datos.movimientos ?? [],
         interesesAplicados: datos.interesesAplicados ?? [],
+        bolsillos: datos.bolsillos ?? [],
+        prestamos: datos.prestamos ?? [],
         ...(datos.config ? { config: datos.config } : {}),
       }
       guardarLocal(merged)
@@ -397,6 +414,134 @@ export function AppProvider({ children }: { children: ReactNode }) {
     notificar('Se sumaron ' + fmt(totalInteres) + ' en intereses')
   }, [pedirConfirmacion, notificar])
 
+  // --- Bolsillos (ahorro) ---
+
+  const agregarBolsillo = useCallback(
+    (nombre: string, saldo: number) => {
+      const b: Bolsillo = { id: nuevoId(), nombre, saldo, creadoEn: new Date().toISOString() }
+      const prev = estadoRef.current
+      const nuevo: EstadoApp = { ...prev, bolsillos: [...prev.bolsillos, b] }
+      setEstado(nuevo)
+      guardarLocal(nuevo)
+      void insertarBolsilloNube(b)
+      notificar('Bolsillo creado')
+    },
+    [notificar],
+  )
+
+  const ajustarBolsillo = useCallback(
+    (id: string, delta: number) => {
+      const prev = estadoRef.current
+      let actualizado: Bolsillo | undefined
+      const bolsillos = prev.bolsillos.map((b) => {
+        if (b.id !== id) return b
+        actualizado = { ...b, saldo: Math.max(0, b.saldo + delta) }
+        return actualizado
+      })
+      const nuevo: EstadoApp = { ...prev, bolsillos }
+      setEstado(nuevo)
+      guardarLocal(nuevo)
+      if (actualizado) void actualizarBolsilloNube(actualizado)
+      notificar(delta >= 0 ? 'Aporte registrado 💰' : 'Retiro registrado')
+    },
+    [notificar],
+  )
+
+  const editarBolsillo = useCallback((id: string, nombre: string) => {
+    const prev = estadoRef.current
+    let actualizado: Bolsillo | undefined
+    const bolsillos = prev.bolsillos.map((b) => {
+      if (b.id !== id) return b
+      actualizado = { ...b, nombre }
+      return actualizado
+    })
+    const nuevo: EstadoApp = { ...prev, bolsillos }
+    setEstado(nuevo)
+    guardarLocal(nuevo)
+    if (actualizado) void actualizarBolsilloNube(actualizado)
+  }, [])
+
+  const eliminarBolsillo = useCallback(
+    async (id: string) => {
+      const b = estadoRef.current.bolsillos.find((x) => x.id === id)
+      const ok = await pedirConfirmacion({
+        titulo: 'Eliminar bolsillo',
+        mensaje: `¿Eliminar "${b?.nombre ?? 'este bolsillo'}"? Se perderá su saldo registrado.`,
+        confirmar: 'Eliminar',
+        peligroso: true,
+      })
+      if (!ok) return
+      const prev = estadoRef.current
+      const nuevo: EstadoApp = { ...prev, bolsillos: prev.bolsillos.filter((x) => x.id !== id) }
+      setEstado(nuevo)
+      guardarLocal(nuevo)
+      void eliminarBolsilloNube(id)
+      notificar('Bolsillo eliminado')
+    },
+    [pedirConfirmacion, notificar],
+  )
+
+  // --- Préstamos (dinero prestado) ---
+
+  const agregarPrestamo = useCallback(
+    (datos: { persona: string; monto: number; fecha: string; nota?: string }) => {
+      const p: Prestamo = {
+        id: nuevoId(),
+        persona: datos.persona,
+        monto: datos.monto,
+        abonado: 0,
+        fecha: datos.fecha,
+        nota: datos.nota,
+        creadoEn: new Date().toISOString(),
+      }
+      const prev = estadoRef.current
+      const nuevo: EstadoApp = { ...prev, prestamos: [p, ...prev.prestamos] }
+      setEstado(nuevo)
+      guardarLocal(nuevo)
+      void insertarPrestamoNube(p)
+      notificar('Préstamo registrado')
+    },
+    [notificar],
+  )
+
+  const abonarPrestamo = useCallback(
+    (id: string, monto: number) => {
+      const prev = estadoRef.current
+      let actualizado: Prestamo | undefined
+      const prestamos = prev.prestamos.map((p) => {
+        if (p.id !== id) return p
+        actualizado = { ...p, abonado: Math.min(p.monto, p.abonado + monto) }
+        return actualizado
+      })
+      const nuevo: EstadoApp = { ...prev, prestamos }
+      setEstado(nuevo)
+      guardarLocal(nuevo)
+      if (actualizado) void actualizarPrestamoNube(actualizado)
+      notificar('Abono registrado 💪')
+    },
+    [notificar],
+  )
+
+  const eliminarPrestamo = useCallback(
+    async (id: string) => {
+      const p = estadoRef.current.prestamos.find((x) => x.id === id)
+      const ok = await pedirConfirmacion({
+        titulo: 'Eliminar préstamo',
+        mensaje: `¿Eliminar el préstamo a "${p?.persona ?? 'esta persona'}"?`,
+        confirmar: 'Eliminar',
+        peligroso: true,
+      })
+      if (!ok) return
+      const prev = estadoRef.current
+      const nuevo: EstadoApp = { ...prev, prestamos: prev.prestamos.filter((x) => x.id !== id) }
+      setEstado(nuevo)
+      guardarLocal(nuevo)
+      void eliminarPrestamoNube(id)
+      notificar('Préstamo eliminado')
+    },
+    [pedirConfirmacion, notificar],
+  )
+
   // --- Perfil ---
 
   const actualizarPerfil = useCallback((cambios: { nombre?: string; telefono?: string }) => {
@@ -545,6 +690,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       editarDeuda,
       eliminarDeuda,
       aplicarInteresesMes,
+      agregarBolsillo,
+      ajustarBolsillo,
+      editarBolsillo,
+      eliminarBolsillo,
+      agregarPrestamo,
+      abonarPrestamo,
+      eliminarPrestamo,
       actualizarPerfil,
       actualizarAvatar,
       quitarAvatar,
@@ -572,6 +724,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       editarDeuda,
       eliminarDeuda,
       aplicarInteresesMes,
+      agregarBolsillo,
+      ajustarBolsillo,
+      editarBolsillo,
+      eliminarBolsillo,
+      agregarPrestamo,
+      abonarPrestamo,
+      eliminarPrestamo,
       actualizarPerfil,
       actualizarAvatar,
       quitarAvatar,

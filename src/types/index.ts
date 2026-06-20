@@ -54,6 +54,25 @@ export interface Perfil {
   avatar: string | null
 }
 
+/** Un "bolsillo" de ahorro con su saldo. */
+export interface Bolsillo {
+  id: string
+  nombre: string
+  saldo: number
+  creadoEn?: string
+}
+
+/** Dinero prestado a una persona. Pendiente = monto - abonado. */
+export interface Prestamo {
+  id: string
+  persona: string
+  monto: number
+  abonado: number
+  fecha: string
+  nota?: string
+  creadoEn?: string
+}
+
 /** Categoría de gasto (con ícono y color para la UI). */
 export interface Categoria {
   id: string
@@ -69,4 +88,6 @@ export interface EstadoApp {
   /** Meses 'YYYY-MM' en los que ya se aplicaron intereses. */
   interesesAplicados: string[]
   config: Config
+  bolsillos: Bolsillo[]
+  prestamos: Prestamo[]
 }

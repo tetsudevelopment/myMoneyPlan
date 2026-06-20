@@ -5,7 +5,7 @@
 // =====================================================================
 
 import type { User } from '@supabase/supabase-js'
-import type { Deuda, EstadoApp, Movimiento } from '../types'
+import type { Bolsillo, Deuda, EstadoApp, Movimiento, Prestamo } from '../types'
 import { supabase } from './supabase'
 
 let usuario: User | null = null
@@ -167,6 +167,23 @@ const aModeloMov = (m: any): Movimiento => ({
   creadoEn: m.creado_en ?? undefined,
 })
 
+const aModeloBolsillo = (b: any): Bolsillo => ({
+  id: b.id,
+  nombre: b.nombre,
+  saldo: Number(b.saldo),
+  creadoEn: b.creado_en ?? undefined,
+})
+
+const aModeloPrestamo = (p: any): Prestamo => ({
+  id: p.id,
+  persona: p.persona,
+  monto: Number(p.monto),
+  abonado: Number(p.abonado),
+  fecha: p.fecha,
+  nota: p.nota ?? undefined,
+  creadoEn: p.creado_en ?? undefined,
+})
+
 // ---------- Bajar / subir ----------
 
 /** Baja todo el estado del usuario desde la nube. Null si falla o no hay sesión. */
@@ -174,11 +191,13 @@ export async function bajarDeNube(): Promise<Partial<EstadoApp> | null> {
   if (!supabase || !usuario) return null
   const uid = usuario.id
   try {
-    const [dRes, mRes, iRes, cRes] = await Promise.all([
+    const [dRes, mRes, iRes, cRes, bRes, pRes] = await Promise.all([
       supabase.from('deudas').select('*').eq('user_id', uid).order('orden_ataque'),
       supabase.from('movimientos').select('*').eq('user_id', uid).order('fecha', { ascending: false }),
       supabase.from('intereses_aplicados').select('mes').eq('user_id', uid),
       supabase.from('config').select('*').eq('user_id', uid).maybeSingle(),
+      supabase.from('bolsillos').select('*').eq('user_id', uid).order('creado_en'),
+      supabase.from('prestamos').select('*').eq('user_id', uid).order('creado_en', { ascending: false }),
     ])
     if (dRes.error || mRes.error || iRes.error) return null
     const parcial: Partial<EstadoApp> = {
@@ -192,6 +211,10 @@ export async function bajarDeNube(): Promise<Partial<EstadoApp> | null> {
         presupuestoOcio: Number(cRes.data.presupuesto_ocio),
       }
     }
+    // bolsillos/prestamos: si las tablas no existen aún (no corrió el SQL),
+    // su error se ignora y quedan como arrays vacíos.
+    if (!bRes.error) parcial.bolsillos = (bRes.data ?? []).map(aModeloBolsillo)
+    if (!pRes.error) parcial.prestamos = (pRes.data ?? []).map(aModeloPrestamo)
     return parcial
   } catch (e) {
     console.warn('Error bajando de la nube:', e)
@@ -335,5 +358,76 @@ export async function subirIntereses(
     }
   } catch (e) {
     console.warn('Error subiendo intereses:', e)
+  }
+}
+
+// ---------- Bolsillos (CRUD en la nube) ----------
+
+export async function insertarBolsilloNube(b: Bolsillo): Promise<void> {
+  if (!supabase || !usuario) return
+  try {
+    await supabase
+      .from('bolsillos')
+      .insert({ id: b.id, user_id: usuario.id, nombre: b.nombre, saldo: b.saldo })
+  } catch (e) {
+    console.warn('Error insertando bolsillo:', e)
+  }
+}
+
+export async function actualizarBolsilloNube(b: Bolsillo): Promise<void> {
+  if (!supabase || !usuario) return
+  try {
+    await supabase.from('bolsillos').update({ nombre: b.nombre, saldo: b.saldo }).eq('id', b.id)
+  } catch (e) {
+    console.warn('Error actualizando bolsillo:', e)
+  }
+}
+
+export async function eliminarBolsilloNube(id: string): Promise<void> {
+  if (!supabase || !usuario) return
+  try {
+    await supabase.from('bolsillos').delete().eq('id', id)
+  } catch (e) {
+    console.warn('Error eliminando bolsillo:', e)
+  }
+}
+
+// ---------- Préstamos (CRUD en la nube) ----------
+
+export async function insertarPrestamoNube(p: Prestamo): Promise<void> {
+  if (!supabase || !usuario) return
+  try {
+    await supabase.from('prestamos').insert({
+      id: p.id,
+      user_id: usuario.id,
+      persona: p.persona,
+      monto: p.monto,
+      abonado: p.abonado,
+      fecha: p.fecha,
+      nota: p.nota ?? null,
+    })
+  } catch (e) {
+    console.warn('Error insertando préstamo:', e)
+  }
+}
+
+export async function actualizarPrestamoNube(p: Prestamo): Promise<void> {
+  if (!supabase || !usuario) return
+  try {
+    await supabase
+      .from('prestamos')
+      .update({ persona: p.persona, monto: p.monto, abonado: p.abonado, fecha: p.fecha, nota: p.nota ?? null })
+      .eq('id', p.id)
+  } catch (e) {
+    console.warn('Error actualizando préstamo:', e)
+  }
+}
+
+export async function eliminarPrestamoNube(id: string): Promise<void> {
+  if (!supabase || !usuario) return
+  try {
+    await supabase.from('prestamos').delete().eq('id', id)
+  } catch (e) {
+    console.warn('Error eliminando préstamo:', e)
   }
 }

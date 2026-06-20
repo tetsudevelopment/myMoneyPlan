@@ -156,7 +156,11 @@ hay total > 0 **y** al menos 2 transacciones de esas categorías en el mes.
 
 ---
 
-## 6. Las 4 secciones (navegación inferior)
+## 6. Las secciones (navegación inferior)
+
+> Nota: además de las 4 originales hay **Perfil** y **Ahorro** (bolsillos + préstamos).
+> El detalle original de las 4 sigue abajo.
+
 
 1. **Inicio** (`Inicio.tsx`): hero con deuda total restante + barra de progreso,
    4 mini-stats del mes, tarjeta "Próximo objetivo" con botón de abono.

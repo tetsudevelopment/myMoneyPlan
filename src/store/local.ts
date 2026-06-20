@@ -16,6 +16,8 @@ export function estadoInicial(): EstadoApp {
     movimientos: [],
     interesesAplicados: [],
     config: { ...CONFIG_DEFAULT },
+    bolsillos: [],
+    prestamos: [],
   }
 }
 

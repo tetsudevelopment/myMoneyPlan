@@ -3,19 +3,21 @@ import { ModalRegistro } from './components/ModalRegistro'
 import { NavBar } from './components/NavBar'
 import { Sidebar } from './components/Sidebar'
 import { AppProvider } from './store/AppContext'
+import { Ahorro } from './views/Ahorro'
 import { Deudas } from './views/Deudas'
 import { Gastos } from './views/Gastos'
 import { Inicio } from './views/Inicio'
 import { Perfil } from './views/Perfil'
 import { Plan } from './views/Plan'
 
-export type Vista = 'resumen' | 'deudas' | 'gastos' | 'plan' | 'perfil'
+export type Vista = 'resumen' | 'deudas' | 'gastos' | 'plan' | 'ahorro' | 'perfil'
 
 const TITULOS: Record<Vista, [string, string]> = {
   resumen: ['Resumen', 'Tu camino a cero deudas'],
   deudas: ['Mis deudas', 'Ordenadas por estrategia de pago'],
   gastos: ['Gastos', '¿En qué se va tu dinero?'],
   plan: ['Mi plan', 'Tu estrategia para salir de deudas'],
+  ahorro: ['Ahorro y préstamos', 'Tus bolsillos y el dinero que prestaste'],
   perfil: ['Mi perfil', 'Tu cuenta y preferencias'],
 }
 
@@ -78,12 +80,13 @@ function Shell() {
             {vista === 'deudas' && <Deudas onAbonar={abrirAbono} />}
             {vista === 'gastos' && <Gastos />}
             {vista === 'plan' && <Plan />}
+            {vista === 'ahorro' && <Ahorro />}
             {vista === 'perfil' && <Perfil />}
           </div>
         </main>
 
-        {/* FAB (móvil/tablet) — oculto en Perfil */}
-        {vista !== 'perfil' && (
+        {/* FAB (móvil/tablet) — oculto en Perfil y Ahorro */}
+        {vista !== 'perfil' && vista !== 'ahorro' && (
           <button
             onClick={abrirRegistro}
             aria-label="Registrar movimiento"
