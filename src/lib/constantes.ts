@@ -40,5 +40,12 @@ export const CATEGORIAS: Categoria[] = [
 /** Categorías consideradas "gasto hormiga". */
 export const CATEGORIAS_HORMIGA = ['comida', 'gaming', 'suscrip', 'otros']
 
+/** Lista completa: predefinidas + las que cree el usuario. */
+export const todasCategorias = (extra: Categoria[] = []): Categoria[] => [...CATEGORIAS, ...extra]
+
+/** Busca una categoría por id en la lista combinada; cae a "Otros" si no existe. */
+export const catById = (id: string | undefined, extra: Categoria[] = []): Categoria =>
+  todasCategorias(extra).find((c) => c.id === id) ?? CATEGORIAS[CATEGORIAS.length - 1]
+
 /** Config por defecto en modo solo-local. */
 export const CONFIG_DEFAULT = { ingresoMensual: 5_800_000, presupuestoOcio: 120_000 }

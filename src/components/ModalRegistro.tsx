@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { CATEGORIAS } from '../lib/constantes'
+import { todasCategorias } from '../lib/constantes'
 import { deudasVivas } from '../lib/finanzas'
 import { fmt } from '../lib/format'
 import { useApp } from '../store/AppContext'
 import type { Movimiento, TipoMovimiento } from '../types'
+import { ModalCategoria } from './ModalCategoria'
 import { MoneyInput } from './MoneyInput'
 
 interface Props {
@@ -24,6 +25,7 @@ const TIPOS: { id: TipoMovimiento; lbl: string }[] = [
 export function ModalRegistro({ abierto, onCerrar, abonoDeudaId, movEditar }: Props) {
   const { estado, registrarMovimiento, editarMovimiento, eliminarMovimiento, notificar } = useApp()
   const vivas = deudasVivas(estado.deudas)
+  const categorias = todasCategorias(estado.categorias)
   const editando = !!movEditar
 
   const [tipo, setTipo] = useState<TipoMovimiento>('gasto')
@@ -31,6 +33,7 @@ export function ModalRegistro({ abierto, onCerrar, abonoDeudaId, movEditar }: Pr
   const [desc, setDesc] = useState('')
   const [cat, setCat] = useState('mercado')
   const [deudaId, setDeudaId] = useState('')
+  const [modalCat, setModalCat] = useState(false)
 
   useEffect(() => {
     if (!abierto) return
@@ -140,7 +143,7 @@ export function ModalRegistro({ abierto, onCerrar, abonoDeudaId, movEditar }: Pr
         {tipo === 'gasto' && (
           <Campo label="Categoría">
             <div className="grid grid-cols-[repeat(auto-fill,minmax(64px,1fr))] gap-2">
-              {CATEGORIAS.map((c) => (
+              {categorias.map((c) => (
                 <button
                   key={c.id}
                   onClick={() => setCat(c.id)}
@@ -152,6 +155,13 @@ export function ModalRegistro({ abierto, onCerrar, abonoDeudaId, movEditar }: Pr
                   <span className="text-center text-[10px] font-medium leading-tight">{c.nombre}</span>
                 </button>
               ))}
+              <button
+                onClick={() => setModalCat(true)}
+                className="flex flex-col items-center justify-center gap-1 rounded-[13px] border-[1.5px] border-dashed border-linea bg-white px-1 py-2.5 text-verde-medio transition"
+              >
+                <span className="text-[22px] leading-none">+</span>
+                <span className="text-center text-[10px] font-medium leading-tight">Nueva</span>
+              </button>
             </div>
           </Campo>
         )}
@@ -188,6 +198,12 @@ export function ModalRegistro({ abierto, onCerrar, abonoDeudaId, movEditar }: Pr
           </button>
         )}
       </div>
+
+      <ModalCategoria
+        abierto={modalCat}
+        onCerrar={() => setModalCat(false)}
+        onCreada={(id) => setCat(id)}
+      />
     </div>
   )
 }

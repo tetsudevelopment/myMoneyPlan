@@ -90,4 +90,6 @@ export interface EstadoApp {
   config: Config
   bolsillos: Bolsillo[]
   prestamos: Prestamo[]
+  /** Categorías de gasto creadas por el usuario (además de las predefinidas). */
+  categorias: Categoria[]
 }

@@ -1,9 +1,7 @@
-import { CATEGORIAS } from '../lib/constantes'
+import { catById } from '../lib/constantes'
 import { fmt } from '../lib/format'
+import { useApp } from '../store/AppContext'
 import type { Deuda, Movimiento } from '../types'
-
-const catById = (id?: string) =>
-  CATEGORIAS.find((c) => c.id === id) ?? CATEGORIAS[CATEGORIAS.length - 1]
 
 export function MovimientoItem({
   mov,
@@ -14,6 +12,7 @@ export function MovimientoItem({
   deudas: Deuda[]
   onSelect?: () => void
 }) {
+  const { estado } = useApp()
   let ico: string
   let color: string
   let etiqueta: string
@@ -21,7 +20,7 @@ export function MovimientoItem({
   let claseMonto = ''
 
   if (mov.tipo === 'gasto') {
-    const c = catById(mov.cat)
+    const c = catById(mov.cat, estado.categorias)
     ico = c.icono
     color = c.color
     etiqueta = c.nombre

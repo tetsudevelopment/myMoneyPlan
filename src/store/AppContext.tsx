@@ -46,6 +46,8 @@ import {
   insertarPrestamoNube,
   actualizarPrestamoNube,
   eliminarPrestamoNube,
+  insertarCategoriaNube,
+  eliminarCategoriaNube,
   registrarUsuario,
   restaurarSesion,
   subirAvatarNube,
@@ -53,7 +55,16 @@ import {
   usandoNube,
   usuarioActivo,
 } from '../lib/sync'
-import type { Bolsillo, Deuda, EstadoApp, Movimiento, Perfil, Prestamo, TipoMovimiento } from '../types'
+import type {
+  Bolsillo,
+  Categoria,
+  Deuda,
+  EstadoApp,
+  Movimiento,
+  Perfil,
+  Prestamo,
+  TipoMovimiento,
+} from '../types'
 import { cargarLocal, estadoInicial, estaOnboarded, guardarLocal, marcarOnboarded } from './local'
 import { cargarPerfil, guardarPerfil, perfilInicial } from './perfil'
 
@@ -102,6 +113,9 @@ interface AppContextValue {
   agregarPrestamo: (datos: { persona: string; monto: number; fecha: string; nota?: string }) => void
   abonarPrestamo: (id: string, monto: number) => void
   eliminarPrestamo: (id: string) => Promise<void>
+  // categorías
+  agregarCategoria: (datos: { nombre: string; icono: string; color: string }) => string
+  eliminarCategoria: (id: string) => void
   // perfil
   actualizarPerfil: (cambios: { nombre?: string; telefono?: string }) => void
   actualizarAvatar: (file: File) => Promise<void>
@@ -172,6 +186,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         interesesAplicados: datos.interesesAplicados ?? [],
         bolsillos: datos.bolsillos ?? [],
         prestamos: datos.prestamos ?? [],
+        categorias: datos.categorias ?? [],
         ...(datos.config ? { config: datos.config } : {}),
       }
       guardarLocal(merged)
@@ -542,6 +557,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [pedirConfirmacion, notificar],
   )
 
+  // --- Categorías ---
+
+  const agregarCategoria = useCallback(
+    (datos: { nombre: string; icono: string; color: string }) => {
+      const cat: Categoria = { id: nuevoId(), ...datos }
+      const prev = estadoRef.current
+      const nuevo: EstadoApp = { ...prev, categorias: [...prev.categorias, cat] }
+      setEstado(nuevo)
+      guardarLocal(nuevo)
+      void insertarCategoriaNube(cat)
+      notificar('Categoría creada')
+      return cat.id
+    },
+    [notificar],
+  )
+
+  const eliminarCategoria = useCallback((id: string) => {
+    const prev = estadoRef.current
+    const nuevo: EstadoApp = { ...prev, categorias: prev.categorias.filter((c) => c.id !== id) }
+    setEstado(nuevo)
+    guardarLocal(nuevo)
+    void eliminarCategoriaNube(id)
+  }, [])
+
   // --- Perfil ---
 
   const actualizarPerfil = useCallback((cambios: { nombre?: string; telefono?: string }) => {
@@ -697,6 +736,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       agregarPrestamo,
       abonarPrestamo,
       eliminarPrestamo,
+      agregarCategoria,
+      eliminarCategoria,
       actualizarPerfil,
       actualizarAvatar,
       quitarAvatar,
@@ -731,6 +772,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       agregarPrestamo,
       abonarPrestamo,
       eliminarPrestamo,
+      agregarCategoria,
+      eliminarCategoria,
       actualizarPerfil,
       actualizarAvatar,
       quitarAvatar,

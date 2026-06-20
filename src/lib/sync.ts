@@ -5,7 +5,7 @@
 // =====================================================================
 
 import type { User } from '@supabase/supabase-js'
-import type { Bolsillo, Deuda, EstadoApp, Movimiento, Prestamo } from '../types'
+import type { Bolsillo, Categoria, Deuda, EstadoApp, Movimiento, Prestamo } from '../types'
 import { supabase } from './supabase'
 
 let usuario: User | null = null
@@ -174,6 +174,13 @@ const aModeloBolsillo = (b: any): Bolsillo => ({
   creadoEn: b.creado_en ?? undefined,
 })
 
+const aModeloCategoria = (c: any): Categoria => ({
+  id: c.id,
+  nombre: c.nombre,
+  icono: c.icono,
+  color: c.color,
+})
+
 const aModeloPrestamo = (p: any): Prestamo => ({
   id: p.id,
   persona: p.persona,
@@ -191,13 +198,14 @@ export async function bajarDeNube(): Promise<Partial<EstadoApp> | null> {
   if (!supabase || !usuario) return null
   const uid = usuario.id
   try {
-    const [dRes, mRes, iRes, cRes, bRes, pRes] = await Promise.all([
+    const [dRes, mRes, iRes, cRes, bRes, pRes, catRes] = await Promise.all([
       supabase.from('deudas').select('*').eq('user_id', uid).order('orden_ataque'),
       supabase.from('movimientos').select('*').eq('user_id', uid).order('fecha', { ascending: false }),
       supabase.from('intereses_aplicados').select('mes').eq('user_id', uid),
       supabase.from('config').select('*').eq('user_id', uid).maybeSingle(),
       supabase.from('bolsillos').select('*').eq('user_id', uid).order('creado_en'),
       supabase.from('prestamos').select('*').eq('user_id', uid).order('creado_en', { ascending: false }),
+      supabase.from('categorias').select('*').eq('user_id', uid).order('creado_en'),
     ])
     if (dRes.error || mRes.error || iRes.error) return null
     const parcial: Partial<EstadoApp> = {
@@ -215,6 +223,7 @@ export async function bajarDeNube(): Promise<Partial<EstadoApp> | null> {
     // su error se ignora y quedan como arrays vacíos.
     if (!bRes.error) parcial.bolsillos = (bRes.data ?? []).map(aModeloBolsillo)
     if (!pRes.error) parcial.prestamos = (pRes.data ?? []).map(aModeloPrestamo)
+    if (!catRes.error) parcial.categorias = (catRes.data ?? []).map(aModeloCategoria)
     return parcial
   } catch (e) {
     console.warn('Error bajando de la nube:', e)
@@ -429,5 +438,27 @@ export async function eliminarPrestamoNube(id: string): Promise<void> {
     await supabase.from('prestamos').delete().eq('id', id)
   } catch (e) {
     console.warn('Error eliminando préstamo:', e)
+  }
+}
+
+// ---------- Categorías (CRUD en la nube) ----------
+
+export async function insertarCategoriaNube(c: Categoria): Promise<void> {
+  if (!supabase || !usuario) return
+  try {
+    await supabase
+      .from('categorias')
+      .insert({ id: c.id, user_id: usuario.id, nombre: c.nombre, icono: c.icono, color: c.color })
+  } catch (e) {
+    console.warn('Error insertando categoría:', e)
+  }
+}
+
+export async function eliminarCategoriaNube(id: string): Promise<void> {
+  if (!supabase || !usuario) return
+  try {
+    await supabase.from('categorias').delete().eq('id', id)
+  } catch (e) {
+    console.warn('Error eliminando categoría:', e)
   }
 }

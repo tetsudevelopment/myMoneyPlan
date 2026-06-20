@@ -1,15 +1,15 @@
 import { useEffect, useRef } from 'react'
-import { CATEGORIAS } from '../lib/constantes'
+import { catById } from '../lib/constantes'
 import { fmt, fmtK } from '../lib/format'
 import type { GastoCategoria } from '../lib/finanzas'
-
-const catById = (id: string) =>
-  CATEGORIAS.find((c) => c.id === id) ?? CATEGORIAS[CATEGORIAS.length - 1]
+import { useApp } from '../store/AppContext'
 
 /** Donut de gastos por categoría dibujado en canvas (como el prototipo). */
 export function DonutChart({ datos }: { datos: GastoCategoria[] }) {
+  const { estado } = useApp()
   const ref = useRef<HTMLCanvasElement>(null)
   const total = datos.reduce((s, d) => s + d.total, 0)
+  const cat = (id: string) => catById(id, estado.categorias)
 
   useEffect(() => {
     const cv = ref.current
@@ -34,7 +34,7 @@ export function DonutChart({ datos }: { datos: GastoCategoria[] }) {
       ctx.beginPath()
       ctx.arc(60, 60, 46, ang, a2)
       ctx.lineWidth = 16
-      ctx.strokeStyle = catById(d.cat).color
+      ctx.strokeStyle = cat(d.cat).color
       ctx.lineCap = 'butt'
       ctx.stroke()
       ang = a2
@@ -47,7 +47,8 @@ export function DonutChart({ datos }: { datos: GastoCategoria[] }) {
     ctx.fillStyle = '#6B7270'
     ctx.font = '400 9px sans-serif'
     ctx.fillText('este mes', 60, 70)
-  }, [datos, total])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [datos, total, estado.categorias])
 
   return (
     <div className="flex items-center gap-4">
@@ -57,7 +58,7 @@ export function DonutChart({ datos }: { datos: GastoCategoria[] }) {
           <div className="text-[12.5px] text-gris-claro">Sin gastos este mes todavía.</div>
         ) : (
           datos.map((d) => {
-            const c = catById(d.cat)
+            const c = cat(d.cat)
             const pct = Math.round((d.total / total) * 100)
             return (
               <div key={d.cat} className="mb-1.5 flex items-center gap-2 text-[12.5px]">

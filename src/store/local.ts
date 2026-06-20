@@ -18,6 +18,7 @@ export function estadoInicial(): EstadoApp {
     config: { ...CONFIG_DEFAULT },
     bolsillos: [],
     prestamos: [],
+    categorias: [],
   }
 }
 

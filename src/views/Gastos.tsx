@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { DonutChart } from '../components/DonutChart'
 import { ModalRegistro } from '../components/ModalRegistro'
 import { MovimientoItem } from '../components/MovimientoItem'
-import { CATEGORIAS } from '../lib/constantes'
+import { catById } from '../lib/constantes'
 import { mesActual } from '../lib/fechas'
 import { detectarHormiga, gastosPorCategoria } from '../lib/finanzas'
 import { fmt } from '../lib/format'
@@ -18,10 +18,9 @@ const TIPOS: { id: FiltroTipo; lbl: string }[] = [
   { id: 'abono', lbl: 'Abonos' },
 ]
 
-const nombreCat = (id: string) => CATEGORIAS.find((c) => c.id === id)?.nombre ?? id
-
 export function Gastos() {
   const { estado } = useApp()
+  const nombreCat = (id: string) => catById(id, estado.categorias).nombre
   const mes = mesActual()
   const porCat = gastosPorCategoria(estado.movimientos, mes)
   const hormiga = detectarHormiga(estado.movimientos, mes)
