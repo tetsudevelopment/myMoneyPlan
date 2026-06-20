@@ -215,7 +215,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const registrarMovimiento = useCallback(
     (input: NuevoMovimiento) => {
-      const mov: Movimiento = { id: nuevoId(), fecha: hoy(), ...input }
+      const mov: Movimiento = {
+        id: nuevoId(),
+        fecha: hoy(),
+        creadoEn: new Date().toISOString(),
+        ...input,
+      }
       const prev = estadoRef.current
       let deudas = prev.deudas
       let saldoNuevo: number | null = null

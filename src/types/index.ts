@@ -36,6 +36,8 @@ export interface Movimiento {
   deudaId?: string
   /** 'YYYY-MM-DD'. */
   fecha: string
+  /** Marca de creación ISO (para ordenar por cuándo se registró). */
+  creadoEn?: string
 }
 
 /** Configuración financiera personal del usuario. */

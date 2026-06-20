@@ -164,6 +164,7 @@ const aModeloMov = (m: any): Movimiento => ({
   cat: m.categoria ?? undefined,
   deudaId: m.deuda_id ?? undefined,
   fecha: m.fecha,
+  creadoEn: m.creado_en ?? undefined,
 })
 
 // ---------- Bajar / subir ----------
@@ -214,6 +215,9 @@ const filaMov = (mov: Movimiento) => ({
   categoria: mov.cat ?? null,
   deuda_id: mov.deudaId ?? null,
   fecha: mov.fecha,
+  // Si el cliente trae su marca de creación, la usamos para que el orden
+  // coincida con local; si no, la DB pone now() por defecto.
+  ...(mov.creadoEn ? { creado_en: mov.creadoEn } : {}),
 })
 
 /** Inserta un movimiento nuevo en la nube. */
