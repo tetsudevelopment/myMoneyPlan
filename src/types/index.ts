@@ -62,6 +62,29 @@ export interface Bolsillo {
   creadoEn?: string
 }
 
+// ---------- Plan en pareja (espacio compartido) ----------
+
+export interface Espacio {
+  id: string
+  nombre: string
+  codigo: string
+}
+
+export interface EspacioMiembro {
+  userId: string
+  nombre: string
+  ingreso: number
+  esYo: boolean
+}
+
+export interface EspacioGasto {
+  id: string
+  nombre: string
+  icono: string
+  color: string
+  montoMensual: number
+}
+
 /** Dinero prestado a una persona. Pendiente = monto - abonado. */
 export interface Prestamo {
   id: string

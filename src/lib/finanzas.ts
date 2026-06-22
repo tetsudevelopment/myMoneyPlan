@@ -255,6 +255,31 @@ export function generarPlan(
   return plan
 }
 
+// ---------- Plan en pareja: reparto proporcional ----------
+
+export interface AporteReparto {
+  userId: string
+  aporte: number
+  /** Porcentaje del total (0-100). */
+  pct: number
+}
+
+/**
+ * Reparte `total` entre los miembros proporcional a su ingreso. Si nadie tiene
+ * ingreso (suma 0), reparte en partes iguales.
+ */
+export function repartoProporcional(
+  total: number,
+  miembros: { userId: string; ingreso: number }[],
+): AporteReparto[] {
+  if (miembros.length === 0) return []
+  const sumaIngresos = miembros.reduce((s, m) => s + Math.max(0, m.ingreso), 0)
+  return miembros.map((m) => {
+    const frac = sumaIngresos > 0 ? Math.max(0, m.ingreso) / sumaIngresos : 1 / miembros.length
+    return { userId: m.userId, aporte: total * frac, pct: Math.round(frac * 100) }
+  })
+}
+
 /** Presupuesto mensual de deuda por defecto: suma de cuotas + un extra. */
 export function presupuestoDeudaDefault(deudas: Deuda[], extra = 1_312_776): number {
   return deudas.reduce((s, d) => s + d.cuota, 0) + extra

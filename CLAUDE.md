@@ -158,8 +158,17 @@ hay total > 0 **y** al menos 2 transacciones de esas categorías en el mes.
 
 ## 6. Las secciones (navegación inferior)
 
-> Nota: además de las 4 originales hay **Perfil** y **Ahorro** (bolsillos + préstamos).
-> El detalle original de las 4 sigue abajo.
+> Nota: además de las 4 originales hay **Perfil**, **Ahorro** (bolsillos + préstamos)
+> y **Pareja** (v2: espacio compartido). El detalle original de las 4 sigue abajo.
+>
+> **Plan en pareja (v2):** espacio compartido entre 2 personas, **solo-nube** (requiere
+> sesión). Tablas `espacios/espacio_miembros/espacio_gastos/espacio_deudas` con RLS por
+> **membresía** (`es_miembro()` SECURITY DEFINER) — ver `supabase_pareja.sql`. Crear/unirse
+> por **código** vía RPC. Gastos mensuales por categoría + reparto **proporcional al
+> ingreso** (`repartoProporcional` en `lib/finanzas.ts`). Capa en `lib/pareja.ts` +
+> `store/usePareja.ts`; vista `views/Pareja.tsx`. NO usa el patrón local-first ni
+> `EstadoApp`: vive aparte porque es data compartida. Acceso: Sidebar (desktop) + botón
+> en Perfil (móvil). Pendiente: deudas compartidas + switch superior Personal/Pareja.
 
 
 1. **Inicio** (`Inicio.tsx`): hero con deuda total restante + barra de progreso,

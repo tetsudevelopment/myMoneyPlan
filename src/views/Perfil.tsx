@@ -3,7 +3,7 @@ import { Avatar } from '../components/Avatar'
 import { hayNube } from '../lib/supabase'
 import { useApp } from '../store/AppContext'
 
-export function Perfil() {
+export function Perfil({ onAbrirPareja }: { onAbrirPareja: () => void }) {
   const {
     perfil,
     sesionEmail,
@@ -132,6 +132,21 @@ export function Perfil() {
           </button>
         )}
       </section>
+
+      {/* Acceso al plan en pareja (en desktop está en el menú lateral) */}
+      <button
+        onClick={onAbrirPareja}
+        className="flex w-full items-center gap-3 rounded-card bg-white p-4 text-left shadow-suave transition active:scale-[.99] lg:hidden"
+      >
+        <span className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-xl bg-verde-claro text-xl">
+          💑
+        </span>
+        <span className="flex-1">
+          <span className="block text-[15px] font-semibold">Plan en pareja</span>
+          <span className="block text-[12px] text-gris">Gastos compartidos y reparto por ingreso</span>
+        </span>
+        <span className="text-gris-claro">›</span>
+      </button>
 
       {/* Datos personales */}
       <section className="rounded-card bg-white p-5 shadow-suave">

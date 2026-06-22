@@ -15,6 +15,7 @@ import {
   pctPagadoDeuda,
   pctPagadoTotal,
   presupuestoDeudaDefault,
+  repartoProporcional,
   statsDelMes,
   tasaMensualDesdeEA,
 } from './finanzas'
@@ -178,6 +179,32 @@ describe('gastos hormiga', () => {
       '2026-06',
     )
     expect(a.activa).toBe(false)
+  })
+})
+
+describe('reparto proporcional (pareja)', () => {
+  it('reparte proporcional al ingreso', () => {
+    const r = repartoProporcional(1_000_000, [
+      { userId: 'a', ingreso: 3_000_000 },
+      { userId: 'b', ingreso: 2_000_000 },
+    ])
+    expect(r[0]).toEqual({ userId: 'a', aporte: 600_000, pct: 60 })
+    expect(r[1]).toEqual({ userId: 'b', aporte: 400_000, pct: 40 })
+  })
+  it('si nadie tiene ingreso, reparte 50/50', () => {
+    const r = repartoProporcional(1000, [
+      { userId: 'a', ingreso: 0 },
+      { userId: 'b', ingreso: 0 },
+    ])
+    expect(r[0].aporte).toBe(500)
+    expect(r[1].aporte).toBe(500)
+  })
+  it('la suma de aportes da el total', () => {
+    const r = repartoProporcional(999, [
+      { userId: 'a', ingreso: 1 },
+      { userId: 'b', ingreso: 2 },
+    ])
+    expect(r[0].aporte + r[1].aporte).toBeCloseTo(999, 6)
   })
 })
 

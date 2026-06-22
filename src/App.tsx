@@ -7,10 +7,11 @@ import { Ahorro } from './views/Ahorro'
 import { Deudas } from './views/Deudas'
 import { Gastos } from './views/Gastos'
 import { Inicio } from './views/Inicio'
+import { Pareja } from './views/Pareja'
 import { Perfil } from './views/Perfil'
 import { Plan } from './views/Plan'
 
-export type Vista = 'resumen' | 'deudas' | 'gastos' | 'plan' | 'ahorro' | 'perfil'
+export type Vista = 'resumen' | 'deudas' | 'gastos' | 'plan' | 'ahorro' | 'pareja' | 'perfil'
 
 const TITULOS: Record<Vista, [string, string]> = {
   resumen: ['Resumen', 'Tu camino a cero deudas'],
@@ -18,6 +19,7 @@ const TITULOS: Record<Vista, [string, string]> = {
   gastos: ['Gastos', '¿En qué se va tu dinero?'],
   plan: ['Mi plan', 'Tu estrategia para salir de deudas'],
   ahorro: ['Ahorro y préstamos', 'Tus bolsillos y el dinero que prestaste'],
+  pareja: ['Plan en pareja', 'Gastos compartidos y reparto por ingreso'],
   perfil: ['Mi perfil', 'Tu cuenta y preferencias'],
 }
 
@@ -81,12 +83,13 @@ function Shell() {
             {vista === 'gastos' && <Gastos />}
             {vista === 'plan' && <Plan />}
             {vista === 'ahorro' && <Ahorro />}
-            {vista === 'perfil' && <Perfil />}
+            {vista === 'pareja' && <Pareja />}
+            {vista === 'perfil' && <Perfil onAbrirPareja={() => irA('pareja')} />}
           </div>
         </main>
 
-        {/* FAB (móvil/tablet) — oculto en Perfil y Ahorro */}
-        {vista !== 'perfil' && vista !== 'ahorro' && (
+        {/* FAB (móvil/tablet) — oculto en Perfil, Ahorro y Pareja */}
+        {vista !== 'perfil' && vista !== 'ahorro' && vista !== 'pareja' && (
           <button
             onClick={abrirRegistro}
             aria-label="Registrar movimiento"

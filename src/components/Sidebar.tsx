@@ -8,6 +8,7 @@ const TABS: { id: Vista; ico: string; lbl: string }[] = [
   { id: 'gastos', ico: '📊', lbl: 'Gastos' },
   { id: 'plan', ico: '🎯', lbl: 'Plan' },
   { id: 'ahorro', ico: '🐷', lbl: 'Ahorro' },
+  { id: 'pareja', ico: '💑', lbl: 'Pareja' },
 ]
 
 /** Navegación lateral para desktop (≥ lg). Reemplaza a la barra inferior. */
