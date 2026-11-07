@@ -4,6 +4,7 @@
 // =====================================================================
 
 import { CONFIG_DEFAULT } from '../lib/constantes'
+import { normalizarBolsillo } from '../lib/finanzas'
 import type { EstadoApp } from '../types'
 
 const KEY = 'miplan_v1'
@@ -29,7 +30,9 @@ export function cargarLocal(): EstadoApp {
     if (crudo) {
       const s = JSON.parse(crudo) as Partial<EstadoApp>
       if (s && Array.isArray(s.deudas)) {
-        return { ...estadoInicial(), ...s } as EstadoApp
+        const estado = { ...estadoInicial(), ...s } as EstadoApp
+        // Bolsillos legados sin moneda -> COP.
+        return { ...estado, bolsillos: estado.bolsillos.map(normalizarBolsillo) }
       }
     }
   } catch {

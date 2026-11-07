@@ -356,6 +356,43 @@ Estado actual del proyecto y decisiones tomadas: ver §"Estado" abajo, manténlo
     que el dashboard renderice; hay test del onboarding.
   - Validado: typecheck OK, 26/26 tests, build OK (100 módulos), dev server 200.
   - Commit inicial del repo: `f4fbf62` (master). `.env` excluido.
+- **2026-11-07 — Ingresos en USD + entidad por bolsillo.** Los dólares son un saldo
+  APARTE, nunca se suman a pesos hasta convertirlos.
+  - Tipos: `Moneda = 'COP' | 'USD'`; `Bolsillo.moneda` (legado = COP, se normaliza al cargar
+    local/nube) y `.entidad?`; `Movimiento.moneda?/bolsilloId?/tasa?`. Solo `ingreso` puede ser USD.
+  - `finanzas.ts`: `esUSD`, `convertirUSDaCOP` (entero), `aplicarDeltaBolsillo`, `totalesBolsillos`,
+    `normalizarBolsillo/Moneda`. `statsDelMes` + `flujoMensual/Diario` ignoran USD; `StatsMes.ingresadoUSD`
+    (se muestra en Inicio solo si > 0). `format.ts` `fmtUSD`; `MoneyInput` acepta `moneda` (USD = 2 decimales).
+  - AppContext: ingreso USD suma al bolsillo (crea "Dólares" si no hay uno USD); editar/eliminar lo
+    revierte/reaplica (como los abonos); `convertirBolsilloUSD` baja el bolsillo y crea un ingreso COP con
+    `tasa` (`ModalConvertir`, botón en Ahorro). Borrar ese ingreso COP NO devuelve los dólares.
+  - `lib/entidades.ts` (bancos, billeteras, inversión, exterior, Efectivo, Otra); `ModalBolsillo` con moneda
+    (inmutable) + entidad. Ahorro muestra totales COP y USD por separado.
+  - **SQL a correr:** [supabase_monedas.sql](supabase_monedas.sql) (idempotente). Sync solo envía las columnas
+    nuevas cuando llevan datos (USD / entidad / tasa), así lo COP sigue funcionando sin correrlo; lo USD no.
+  - Revisión: al borrar un bolsillo se limpia `bolsilloId` de sus movimientos; editar/eliminar un ingreso USD
+    se BLOQUEA (toast) si el saldo del bolsillo no alcanza para revertirlo (`ajustarBolsillosIngresoUSD`);
+    saldos USD redondeados a 2 decimales; limpiar la entidad manda `entidad: null` a la nube; sheets con
+    Escape (`lib/useEscape.ts`) y botón Cerrar (`SheetTitulo`); clase `.eyebrow` (antes `.overline`, chocaba con Tailwind).
+  - Validado: typecheck OK, tests OK, build OK.
+- **2026-11-07 — Rediseño visual mobile-first (sin cambios de comportamiento).**
+  - Dirección: modo "Operate" (app de producto, familiaridad > expresión). Misma paleta verde
+    y copy; jerarquía más clara (cifra héroe grande + contexto), superficies blancas con una
+    sola elevación (`shadow-suave`), radios 14-24px, objetivos táctiles ≥44px, inputs ≥16px.
+  - **Primitivas CSS** (`src/index.css`, `@layer components`): `.sheet-overlay/.sheet/.sheet-grab/
+    .sheet-title` (bottom-sheet con animación y `max-h-[92dvh]`), `.field/.field-label`,
+    `.btn` + `.btn-primary/-secondary/-soft/-danger/-dashed/-icon`, `.seg/.seg-btn`
+    (control segmentado; activo vía `aria-pressed`), `.card`, `.hero`, `.overline`, `.chip`.
+    Base global: `tabular-nums` en todo el body, `:focus-visible`, `::selection`, input/select
+    16px y min-h 48px, `prefers-reduced-motion`. Tokens nuevos en Tailwind: sombras `sheet` y `fab`.
+  - **Componentes nuevos:** `Icon.tsx` (SVG inline propio, reemplaza emojis en NavBar, Sidebar,
+    FAB, editar/borrar, estados vacíos y filas de ingreso/abono), `Hero.tsx` (tarjeta de cifra
+    principal, compartida por Inicio/Deudas/Ahorro), `Stat.tsx` (mini-cifra). Los emojis de
+    categorías (datos del usuario) se conservan.
+  - Cambios de patrón: NavBar con píldora activa + `aria-current`; `DeudaCard` objetivo usa
+    `ring-2` (sin franja lateral); filtros de Gastos en chips con scroll horizontal; toast con
+    `role="status"`. Para campos y botones nuevos usar las clases
+    de arriba, no strings Tailwind sueltos.
 - **Decisiones tomadas:**
   - **Auth = email/OTP** (no anónimo). Un solo dueño; el seed del SQL es de su UID. Ver
     ARCHITECTURE.md §4.

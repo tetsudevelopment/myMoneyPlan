@@ -4,7 +4,7 @@
 //  Cubierto por finanzas.test.ts.
 // =====================================================================
 
-import type { Deuda, Movimiento, TipoMovimiento } from '../types'
+import type { Bolsillo, Deuda, Moneda, Movimiento, TipoMovimiento } from '../types'
 import { CATEGORIAS_HORMIGA } from './constantes'
 
 // ---------- Intereses ----------
@@ -57,23 +57,123 @@ export function pctPagadoTotal(deudas: Deuda[], totalInicial = deudaInicialTotal
   return Math.max(0, Math.round((1 - deudaTotalActual(deudas) / totalInicial) * 100))
 }
 
+// ---------- Monedas (USD como saldo aparte) ----------
+
+/** true si el movimiento está en dólares (undefined = COP). */
+export const esUSD = (m: Movimiento): boolean => m.moneda === 'USD'
+
+/** Cualquier valor que no sea 'USD' es COP (datos legados / columnas ausentes). */
+export const normalizarMoneda = (m: unknown): Moneda => (m === 'USD' ? 'USD' : 'COP')
+
+/** Garantiza que un bolsillo (posiblemente legado) tenga moneda. */
+export const normalizarBolsillo = (b: Bolsillo): Bolsillo => ({
+  ...b,
+  moneda: normalizarMoneda(b.moneda),
+})
+
+/** Pesos (enteros) que resultan de convertir `montoUSD` a `tasa` COP por dólar. */
+export function convertirUSDaCOP(montoUSD: number, tasa: number): number {
+  if (!(montoUSD > 0) || !(tasa > 0)) return 0
+  return Math.round(montoUSD * tasa)
+}
+
+const redondear2 = (n: number): number => Math.round(n * 100) / 100
+
+/** Suma `delta` al saldo del bolsillo `id` (sin bajar de 0, a 2 decimales). Devuelve copia. */
+export function aplicarDeltaBolsillo(bolsillos: Bolsillo[], id: string, delta: number): Bolsillo[] {
+  return bolsillos.map((b) =>
+    b.id === id ? { ...b, saldo: Math.max(0, redondear2(b.saldo + delta)) } : b,
+  )
+}
+
+/** true si el bolsillo existe y su saldo cubre `monto` (comparación a 2 decimales). */
+export function puedeRestar(bolsillos: Bolsillo[], id: string, monto: number): boolean {
+  const b = bolsillos.find((x) => x.id === id)
+  return !!b && redondear2(b.saldo) >= redondear2(monto)
+}
+
+/** Quita `bolsilloId` de los movimientos que apuntaban a un bolsillo eliminado. */
+export function desvincularBolsillo(movimientos: Movimiento[], bolsilloId: string): Movimiento[] {
+  return movimientos.map((m) => (m.bolsilloId === bolsilloId ? { ...m, bolsilloId: undefined } : m))
+}
+
+export const MSG_SALDO_INSUFICIENTE =
+  'No se puede: ya usaste parte de esos dólares (convertidos o retirados) y el bolsillo no alcanza para revertir el ingreso.'
+
+/**
+ * Efecto en los bolsillos de editar (`nuevo`) o eliminar (`nuevo = null`) un ingreso USD.
+ * Revierte el aporte viejo solo si su bolsillo aún existe; aplica el nuevo solo si
+ * apunta a un bolsillo existente. Si revertir exige más que el saldo actual, no
+ * cambia nada y devuelve `error` (nunca recorta en silencio).
+ */
+export function ajustarBolsillosIngresoUSD(
+  bolsillos: Bolsillo[],
+  viejo: Movimiento,
+  nuevo: Movimiento | null,
+): { bolsillos: Bolsillo[]; afectados: string[]; error?: string } {
+  const existe = (id?: string) => !!id && bolsillos.some((b) => b.id === id)
+  // Mismo bolsillo existente: solo cuenta el neto (nuevo - viejo). Si no cambia, no se toca nada.
+  if (nuevo && existe(viejo.bolsilloId) && viejo.bolsilloId === nuevo.bolsilloId) {
+    const neto = redondear2(nuevo.monto - viejo.monto)
+    if (neto === 0) return { bolsillos, afectados: [] }
+    if (neto < 0 && !puedeRestar(bolsillos, viejo.bolsilloId!, -neto)) {
+      return { bolsillos, afectados: [], error: MSG_SALDO_INSUFICIENTE }
+    }
+    return {
+      bolsillos: aplicarDeltaBolsillo(bolsillos, viejo.bolsilloId!, neto),
+      afectados: [viejo.bolsilloId!],
+    }
+  }
+  let res = bolsillos
+  const afectados = new Set<string>()
+  if (existe(viejo.bolsilloId)) {
+    if (!puedeRestar(res, viejo.bolsilloId!, viejo.monto)) {
+      return { bolsillos, afectados: [], error: MSG_SALDO_INSUFICIENTE }
+    }
+    res = aplicarDeltaBolsillo(res, viejo.bolsilloId!, -viejo.monto)
+    afectados.add(viejo.bolsilloId!)
+  }
+  if (nuevo && existe(nuevo.bolsilloId)) {
+    res = aplicarDeltaBolsillo(res, nuevo.bolsilloId!, nuevo.monto)
+    afectados.add(nuevo.bolsilloId!)
+  }
+  return { bolsillos: res, afectados: [...afectados] }
+}
+
+/** Totales de ahorro por moneda; nunca se mezclan. */
+export function totalesBolsillos(bolsillos: Bolsillo[]): { cop: number; usd: number } {
+  let cop = 0
+  let usd = 0
+  for (const b of bolsillos) {
+    if (b.moneda === 'USD') usd += b.saldo
+    else cop += b.saldo
+  }
+  return { cop, usd }
+}
+
 // ---------- Stats del mes ----------
 
 export interface StatsMes {
   pagado: number
   gastado: number
+  /** Solo ingresos en COP. */
   ingresado: number
+  /** Ingresos en dólares del mes (aparte; no cuentan como pesos). */
+  ingresadoUSD: number
   disponible: number
 }
 
 export function statsDelMes(movimientos: Movimiento[], mes: string): StatsMes {
   const delMes = movimientos.filter((m) => m.fecha.startsWith(mes))
   const suma = (t: TipoMovimiento) =>
-    delMes.filter((m) => m.tipo === t).reduce((s, m) => s + m.monto, 0)
+    delMes.filter((m) => m.tipo === t && !esUSD(m)).reduce((s, m) => s + m.monto, 0)
   const pagado = suma('abono')
   const gastado = suma('gasto')
   const ingresado = suma('ingreso')
-  return { pagado, gastado, ingresado, disponible: ingresado - gastado - pagado }
+  const ingresadoUSD = delMes
+    .filter((m) => m.tipo === 'ingreso' && esUSD(m))
+    .reduce((s, m) => s + m.monto, 0)
+  return { pagado, gastado, ingresado, ingresadoUSD, disponible: ingresado - gastado - pagado }
 }
 
 // ---------- Gastos ----------
@@ -120,7 +220,7 @@ export function flujoMensual(
   }
   return meses.map((ym) => {
     const delMes = movimientos.filter((m) => m.fecha.startsWith(ym))
-    const ingresos = delMes.filter((m) => m.tipo === 'ingreso').reduce((s, m) => s + m.monto, 0)
+    const ingresos = delMes.filter((m) => m.tipo === 'ingreso' && !esUSD(m)).reduce((s, m) => s + m.monto, 0)
     const gastos = delMes.filter((m) => m.tipo === 'gasto').reduce((s, m) => s + m.monto, 0)
     return { mes: ym, ingresos, gastos }
   })
@@ -141,7 +241,7 @@ export function flujoDiario(movimientos: Movimiento[], mesStr: string): FlujoDia
   for (let d = 1; d <= dias; d++) {
     const fecha = `${mesStr}-${String(d).padStart(2, '0')}`
     const delDia = movimientos.filter((m) => m.fecha === fecha)
-    const ingresos = delDia.filter((m) => m.tipo === 'ingreso').reduce((s, m) => s + m.monto, 0)
+    const ingresos = delDia.filter((m) => m.tipo === 'ingreso' && !esUSD(m)).reduce((s, m) => s + m.monto, 0)
     const gastos = delDia.filter((m) => m.tipo === 'gasto').reduce((s, m) => s + m.monto, 0)
     res.push({ dia: d, ingresos, gastos })
   }

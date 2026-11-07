@@ -1,3 +1,5 @@
+import { useEscape } from '../lib/useEscape'
+
 export interface ConfirmOpts {
   titulo: string
   mensaje: string
@@ -17,27 +19,26 @@ export function ConfirmDialog({
   opts: ConfirmOpts
   onResponder: (valor: boolean) => void
 }) {
+  useEscape(true, () => onResponder(false))
   return (
     <div
-      className="fixed inset-0 z-[160] flex items-end bg-verde-prof/45 lg:items-center lg:justify-center lg:p-6"
+      className="sheet-overlay z-[160]"
       onClick={(e) => e.target === e.currentTarget && onResponder(false)}
     >
-      <div className="mx-auto w-full max-w-app rounded-t-[24px] bg-crema px-5 pb-[calc(22px+env(safe-area-inset-bottom))] pt-6 lg:max-w-sm lg:rounded-[24px] lg:pb-6 lg:shadow-suave-lg">
-        <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-linea lg:hidden" />
-        <h3 className="text-lg font-bold">{opts.titulo}</h3>
-        <p className="mt-1.5 text-[13.5px] leading-relaxed text-gris">{opts.mensaje}</p>
-        <div className="mt-5 flex gap-2.5">
+      <div className="sheet">
+        <div className="sheet-grab" />
+        <h3 className="sheet-title mb-0">{opts.titulo}</h3>
+        <p className="mt-2 text-[14px] leading-relaxed text-carbon/65">{opts.mensaje}</p>
+        <div className="mt-6 flex gap-2.5">
           <button
             onClick={() => onResponder(false)}
-            className="flex-1 rounded-[13px] border-[1.5px] border-linea bg-white py-3 text-[15px] font-semibold text-gris transition active:scale-[.98]"
+            className="btn-secondary flex-1"
           >
             {opts.cancelar ?? 'Cancelar'}
           </button>
           <button
             onClick={() => onResponder(true)}
-            className={`flex-1 rounded-[13px] py-3 text-[15px] font-semibold text-white transition active:scale-[.98] ${
-              opts.peligroso ? 'bg-rojo' : 'bg-verde-prof'
-            }`}
+            className={`btn flex-1 text-white ${opts.peligroso ? 'bg-rojo' : 'bg-verde-prof'}`}
           >
             {opts.confirmar ?? 'Confirmar'}
           </button>

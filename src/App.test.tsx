@@ -75,3 +75,41 @@ describe('App (onboarding)', () => {
     expect(screen.getByText('Bienvenido a Mi Plan')).toBeTruthy()
   })
 })
+
+describe('App (ingresos en USD)', () => {
+  const leer = () => JSON.parse(localStorage.getItem('miplan_v1') ?? '{}')
+
+  it('un ingreso USD crea el bolsillo "Dólares" y no cuenta como pesos', () => {
+    render(<App />)
+    fireEvent.click(screen.getByLabelText('Registrar movimiento'))
+    fireEvent.click(screen.getByText('Ingreso'))
+    fireEvent.click(screen.getByText('Dólares (USD)'))
+    expect(screen.getByText(/se creará un bolsillo/)).toBeTruthy()
+    fireEvent.change(screen.getByPlaceholderText('0'), { target: { value: '1,250.50' } })
+    fireEvent.click(screen.getByText('Guardar'))
+
+    const s = leer()
+    expect(s.bolsillos).toHaveLength(1)
+    expect(s.bolsillos[0]).toMatchObject({ nombre: 'Dólares', moneda: 'USD', saldo: 1250.5 })
+    expect(s.movimientos[0]).toMatchObject({
+      tipo: 'ingreso',
+      moneda: 'USD',
+      monto: 1250.5,
+      bolsilloId: s.bolsillos[0].id,
+    })
+  })
+})
+
+describe('App (sheets)', () => {
+  it('el modal de registro se cierra con Escape y con el botón Cerrar', () => {
+    render(<App />)
+    fireEvent.click(screen.getByLabelText('Registrar movimiento'))
+    expect(screen.getByText('Categoría')).toBeTruthy()
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByText('Categoría')).toBeNull()
+
+    fireEvent.click(screen.getByLabelText('Registrar movimiento'))
+    fireEvent.click(screen.getByLabelText('Cerrar'))
+    expect(screen.queryByText('Categoría')).toBeNull()
+  })
+})

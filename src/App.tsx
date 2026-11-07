@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Icon } from './components/Icon'
 import { ModalRegistro } from './components/ModalRegistro'
 import { NavBar } from './components/NavBar'
 import { Sidebar } from './components/Sidebar'
@@ -64,17 +65,17 @@ function Shell() {
       <div className="relative mx-auto min-h-screen w-full max-w-app pb-[calc(72px+env(safe-area-inset-bottom))] lg:max-w-none lg:flex-1 lg:pb-0">
         {/* Inicio trae su propio encabezado claro; las demás vistas usan el verde */}
         {vista !== 'resumen' && (
-          <header className="relative overflow-hidden bg-verde-prof px-5 pb-[22px] pt-[calc(env(safe-area-inset-top)+18px)] text-crema lg:px-8 lg:pb-7 lg:pt-7">
+          <header className="relative overflow-hidden bg-verde-prof px-5 pb-5 pt-[calc(env(safe-area-inset-top)+18px)] text-crema lg:px-8 lg:pb-7 lg:pt-7">
             <div className="lg:mx-auto lg:max-w-5xl">
-              <h1 className="text-sm font-medium tracking-wide opacity-75 lg:text-base">{titulo}</h1>
-              <p className="mt-0.5 text-xs opacity-55 lg:text-sm">{sub}</p>
+              <h1 className="text-[22px] font-bold leading-tight tracking-tight lg:text-2xl">{titulo}</h1>
+              <p className="mt-1 text-[13px] text-crema/70 lg:text-sm">{sub}</p>
             </div>
           </header>
         )}
 
         <main
           className={`px-4 pb-6 lg:px-8 lg:pb-12 lg:pt-8 ${
-            vista === 'resumen' ? 'pt-[calc(env(safe-area-inset-top)+16px)]' : 'pt-[18px]'
+            vista === 'resumen' ? 'pt-[calc(env(safe-area-inset-top)+16px)]' : 'pt-5'
           }`}
         >
           <div className="lg:mx-auto lg:max-w-5xl">
@@ -93,9 +94,9 @@ function Shell() {
           <button
             onClick={abrirRegistro}
             aria-label="Registrar movimiento"
-            className="fixed bottom-[calc(80px+env(safe-area-inset-bottom))] right-4 z-[55] flex h-14 w-14 items-center justify-center rounded-full bg-verde-vivo text-[28px] text-white shadow-[0_6px_20px_rgba(29,158,117,0.4)] transition active:scale-90 sm:right-6 lg:hidden"
+            className="fixed bottom-[calc(72px+env(safe-area-inset-bottom))] right-4 z-[55] flex h-14 w-14 items-center justify-center rounded-full bg-verde-vivo text-white shadow-fab transition active:scale-90 sm:right-6 lg:hidden"
           >
-            +
+            <Icon name="plus" className="h-7 w-7" strokeWidth={2.25} />
           </button>
         )}
 

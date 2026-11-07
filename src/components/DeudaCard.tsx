@@ -1,6 +1,7 @@
 import { pctPagadoDeuda } from '../lib/finanzas'
 import { fmt, fmtK } from '../lib/format'
 import type { Deuda } from '../types'
+import { Icon } from './Icon'
 
 interface Props {
   deuda: Deuda
@@ -16,63 +17,66 @@ export function DeudaCard({ deuda, esObjetivo, onAbonar, onEditar }: Props) {
 
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl bg-white p-[15px] shadow-suave ${
-        pagada ? 'opacity-70' : ''
-      } ${esObjetivo ? 'border-[1.5px] border-verde-vivo' : ''}`}
+      className={`relative overflow-hidden rounded-card p-4 shadow-suave ${
+        esObjetivo
+          ? 'bg-gradient-to-b from-verde-claro/70 to-white ring-2 ring-verde-vivo'
+          : 'bg-white'
+      } ${pagada ? 'opacity-70' : ''}`}
     >
-      {esObjetivo && <div className="absolute inset-y-0 left-0 w-1 bg-verde-vivo" />}
-
-      {onEditar && (
-        <button
-          onClick={() => onEditar(deuda)}
-          aria-label="Editar deuda"
-          className="absolute right-2.5 top-2.5 grid h-7 w-7 place-items-center rounded-lg text-gris-claro transition hover:bg-crema"
-        >
-          ✏️
-        </button>
-      )}
-
       {esObjetivo && (
-        <span className="mb-1.5 inline-block rounded-full bg-verde-claro px-2 py-0.5 text-[10px] font-bold text-verde-vivo">
+        <span className="mb-2 inline-block rounded-full bg-verde-vivo px-2.5 py-1 text-[11px] font-bold tracking-wide text-white">
           ⚡ OBJETIVO ACTUAL
         </span>
       )}
 
-      <div className="mb-2.5 flex items-start justify-between pr-7">
-        <div>
-          <div className="text-[15px] font-semibold">{deuda.nombre}</div>
-          <div className="mt-0.5 text-[11.5px] text-gris">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="truncate text-[16px] font-semibold leading-snug">{deuda.nombre}</div>
+          <div className="mt-0.5 text-[12px] text-gris">
             Tasa {deuda.tasaEA}% E.A. · Cuota {fmt(deuda.cuota)}
           </div>
         </div>
-        <span
-          className={`mt-0.5 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
-            pagada
-              ? 'bg-verde-claro text-verde-vivo'
-              : deuda.tipo === 'tarjeta'
-                ? 'bg-rojo-bg text-rojo'
-                : 'bg-[#EAF1FB] text-azul'
-          }`}
-        >
-          {pagada ? '✓ Pagada' : deuda.tipo}
-        </span>
+        <div className="-mr-1.5 -mt-1.5 flex flex-shrink-0 items-center gap-1">
+          <span
+            className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${
+              pagada
+                ? 'bg-verde-claro text-verde-medio'
+                : deuda.tipo === 'tarjeta'
+                  ? 'bg-rojo-bg text-rojo'
+                  : 'bg-[#EAF1FB] text-azul'
+            }`}
+          >
+            {pagada ? '✓ Pagada' : deuda.tipo}
+          </span>
+          {onEditar && (
+            <button
+              onClick={() => onEditar(deuda)}
+              aria-label="Editar deuda"
+              className="btn-icon text-gris-claro"
+            >
+              <Icon name="edit" className="h-[18px] w-[18px]" />
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className="text-[21px] font-bold tracking-tight">{fmt(Math.max(0, deuda.saldo))}</div>
-
-      <div className="mt-2.5 h-[5px] overflow-hidden rounded-full bg-linea">
-        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: colorBarra }} />
+      <div className="mt-3 text-[26px] font-bold leading-none tracking-tight">
+        {fmt(Math.max(0, deuda.saldo))}
       </div>
-      <div className="mt-1.5 flex justify-between text-[11px] text-gris">
+
+      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-linea">
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{ width: `${pct}%`, background: colorBarra }}
+        />
+      </div>
+      <div className="mt-1.5 flex justify-between text-[12px] text-gris">
         <span>{pct}% pagado</span>
         <span>Inicial: {fmtK(deuda.saldoInicial)}</span>
       </div>
 
       {!pagada && (
-        <button
-          onClick={() => onAbonar(deuda.id)}
-          className="mt-3 w-full rounded-[11px] bg-verde-claro py-2.5 text-[13px] font-semibold text-verde-medio transition active:scale-[.98]"
-        >
+        <button onClick={() => onAbonar(deuda.id)} className="btn-soft mt-3.5 w-full">
           Registrar abono
         </button>
       )}

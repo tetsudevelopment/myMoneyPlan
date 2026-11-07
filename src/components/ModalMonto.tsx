@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react'
+import { useEscape } from '../lib/useEscape'
 import { useApp } from '../store/AppContext'
+import type { Moneda } from '../types'
+import { SheetTitulo } from './SheetTitulo'
 import { MoneyInput } from './MoneyInput'
 
 interface Props {
@@ -7,18 +10,21 @@ interface Props {
   titulo: string
   etiqueta?: string
   confirmar?: string
+  moneda?: Moneda
   onCerrar: () => void
   onConfirmar: (monto: number) => void
 }
 
 /** Modal genérico para pedir un monto (aportar, retirar, abonar...). */
-export function ModalMonto({ abierto, titulo, etiqueta = 'Monto', confirmar = 'Guardar', onCerrar, onConfirmar }: Props) {
+export function ModalMonto({ abierto, titulo, etiqueta = 'Monto', confirmar = 'Guardar', moneda = 'COP', onCerrar, onConfirmar }: Props) {
   const { notificar } = useApp()
   const [monto, setMonto] = useState('')
 
   useEffect(() => {
     if (abierto) setMonto('')
   }, [abierto])
+
+  useEscape(abierto, onCerrar)
 
   if (!abierto) return null
 
@@ -31,19 +37,19 @@ export function ModalMonto({ abierto, titulo, etiqueta = 'Monto', confirmar = 'G
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-end bg-verde-prof/45 lg:items-center lg:justify-center lg:p-6"
+      className="sheet-overlay"
       onClick={(e) => e.target === e.currentTarget && onCerrar()}
     >
-      <div className="mx-auto w-full max-w-app rounded-t-[24px] bg-crema px-[18px] pb-[calc(22px+env(safe-area-inset-bottom))] pt-[22px] lg:max-w-sm lg:rounded-[24px] lg:pb-[22px] lg:shadow-suave-lg">
-        <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-linea lg:hidden" />
-        <h3 className="mb-4 text-lg font-bold">{titulo}</h3>
-        <label className="mb-1.5 block text-xs font-semibold text-gris">{etiqueta}</label>
-        <div className="mb-4">
-          <MoneyInput value={monto} onChange={setMonto} autoFocus />
+      <div className="sheet">
+        <div className="sheet-grab" />
+        <SheetTitulo onCerrar={onCerrar}>{titulo}</SheetTitulo>
+        <label className="field-label">{etiqueta}</label>
+        <div className="mb-5">
+          <MoneyInput value={monto} onChange={setMonto} autoFocus moneda={moneda} />
         </div>
         <button
           onClick={guardar}
-          className="w-full rounded-[13px] bg-verde-prof py-[15px] text-[15px] font-semibold text-crema transition active:scale-[.98]"
+          className="btn-primary"
         >
           {confirmar}
         </button>

@@ -28,14 +28,14 @@ export function InstallBanner() {
   }
 
   return (
-    <div className="mb-3.5 flex items-center gap-2.5 rounded-2xl bg-verde-claro px-3.5 py-3">
-      <span className="text-xl">📲</span>
-      <span className="flex-1 text-[12.5px] text-verde-medio">
+    <div className="mb-4 flex items-center gap-3 rounded-2xl bg-verde-claro px-4 py-3">
+      <span className="text-xl" aria-hidden>📲</span>
+      <span className="flex-1 text-[13px] text-verde-medio">
         Instala Mi Plan en tu teléfono para abrirla como app
       </span>
       <button
         onClick={instalar}
-        className="rounded-[9px] bg-verde-prof px-3.5 py-2 text-xs font-semibold text-white"
+        className="min-h-[44px] rounded-xl bg-verde-prof px-4 text-[13px] font-semibold text-white"
       >
         Instalar
       </button>

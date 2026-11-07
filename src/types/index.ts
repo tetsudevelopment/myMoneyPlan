@@ -5,6 +5,8 @@
 
 export type TipoDeuda = 'tarjeta' | 'credito'
 export type TipoMovimiento = 'gasto' | 'ingreso' | 'abono'
+/** Moneda de un ingreso o bolsillo. Sin dato = COP. */
+export type Moneda = 'COP' | 'USD'
 
 /** Una deuda (tarjeta o crédito) con su saldo vivo. */
 export interface Deuda {
@@ -38,6 +40,12 @@ export interface Movimiento {
   fecha: string
   /** Marca de creación ISO (para ordenar por cuándo se registró). */
   creadoEn?: string
+  /** Solo ingresos pueden ser USD. undefined = COP. */
+  moneda?: Moneda
+  /** Bolsillo USD destino de un ingreso en dólares. */
+  bolsilloId?: string
+  /** COP por 1 USD (en conversiones USD -> COP). */
+  tasa?: number
 }
 
 /** Configuración financiera personal del usuario. */
@@ -58,7 +66,12 @@ export interface Perfil {
 export interface Bolsillo {
   id: string
   nombre: string
+  /** En la moneda del bolsillo (COP o USD). */
   saldo: number
+  /** Datos legados sin moneda se normalizan a 'COP'. */
+  moneda: Moneda
+  /** Banco / billetera donde está el dinero (texto libre si es "Otra"). */
+  entidad?: string
   creadoEn?: string
 }
 

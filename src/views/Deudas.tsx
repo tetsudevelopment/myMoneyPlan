@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { DeudaCard } from '../components/DeudaCard'
+import { Hero } from '../components/Hero'
+import { Icon } from '../components/Icon'
 import { ModalDeuda } from '../components/ModalDeuda'
+import { Stat } from '../components/Stat'
 import { mesActual, nombreMesActual } from '../lib/fechas'
 import {
   deudaInicialTotal,
@@ -43,42 +46,43 @@ export function Deudas({ onAbonar }: { onAbonar: (deudaId: string) => void }) {
   return (
     <>
       {estado.deudas.length > 0 && (
-        <section className="mb-4 rounded-hero bg-gradient-to-br from-verde-prof to-verde-medio p-[22px] text-crema shadow-suave-lg lg:p-7">
-          <p className="text-xs font-medium tracking-wide opacity-70">DEUDA TOTAL RESTANTE</p>
-          <p className="my-1 text-[32px] font-bold leading-none tracking-tight lg:text-[40px]">
-            {fmt(totalRestante)}
-          </p>
-          <p className="text-[12.5px] opacity-65">de {fmt(totalInicial)} inicial</p>
-          <div className="mt-4 h-[7px] overflow-hidden rounded-full bg-white/20">
+        <Hero
+          label="DEUDA TOTAL RESTANTE"
+          valor={fmt(totalRestante)}
+          detalle={`de ${fmt(totalInicial)} inicial`}
+        >
+          <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/20">
             <div
               className="h-full rounded-full bg-verde-vivo transition-all duration-700"
               style={{ width: `${pctTotal}%` }}
             />
           </div>
-          <div className="mt-2 flex justify-between text-[11px] opacity-70">
+          <div className="mt-2 flex justify-between text-[12px] text-crema/75">
             <span>{pctTotal}% pagado</span>
             <span>
               {vivas.length} {vivas.length === 1 ? 'deuda activa' : 'deudas activas'}
             </span>
           </div>
-        </section>
+        </Hero>
       )}
 
-      <section className="mb-4 grid grid-cols-2 gap-2.5 sm:max-w-md">
-        <Mini label="Deudas activas" valor={String(vivas.length)} />
-        <Mini label="Cuota mensual" valor={fmtK(cuotaTotal)} />
+      <section className="mb-4 mt-0 grid grid-cols-2 gap-2.5 sm:max-w-md">
+        <Stat label="Deudas activas" valor={String(vivas.length)} />
+        <Stat label="Cuota mensual" valor={fmtK(cuotaTotal)} />
       </section>
 
       {estado.deudas.length === 0 ? (
-        <div className="rounded-card bg-white px-6 py-10 text-center shadow-suave">
-          <div className="mb-2 text-4xl">💳</div>
-          <div className="text-[14px] font-semibold">Aún no tienes deudas</div>
-          <p className="mx-auto mt-1 max-w-xs text-[13px] text-gris">
+        <div className="card px-6 py-10 text-center">
+          <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-verde-claro text-verde-medio">
+            <Icon name="card" className="h-7 w-7" />
+          </div>
+          <div className="text-[16px] font-semibold">Aún no tienes deudas</div>
+          <p className="mx-auto mt-1 max-w-xs text-[14px] text-gris">
             Agrega tus deudas para armar tu plan de pago.
           </p>
           <button
             onClick={abrirNueva}
-            className="mt-4 rounded-[13px] bg-verde-prof px-5 py-3 text-sm font-semibold text-crema"
+            className="btn mt-4 bg-verde-prof px-6 text-crema"
           >
             + Agregar deuda
           </button>
@@ -99,7 +103,7 @@ export function Deudas({ onAbonar }: { onAbonar: (deudaId: string) => void }) {
 
           <button
             onClick={abrirNueva}
-            className="mb-4 w-full rounded-[13px] border-[1.5px] border-dashed border-linea bg-white py-3 text-sm font-semibold text-verde-medio transition active:scale-[.99] md:max-w-xs"
+            className="mb-4 btn-dashed md:max-w-xs"
           >
             + Agregar deuda
           </button>
@@ -108,15 +112,15 @@ export function Deudas({ onAbonar }: { onAbonar: (deudaId: string) => void }) {
             <button
               onClick={aplicarInteresesMes}
               disabled={yaAplicado}
-              className={`w-full rounded-[13px] border-[1.5px] py-3.5 text-sm font-semibold transition ${
+              className={`btn w-full border ${
                 yaAplicado
                   ? 'border-[#bfe6d6] bg-verde-claro text-verde-medio'
-                  : 'border-[#F0D5BC] bg-white text-ambar active:scale-[.99]'
+                  : 'border-[#F0D5BC] bg-white text-ambar'
               }`}
             >
               {yaAplicado ? `✓ Intereses de ${mes} ya aplicados` : `↻ Aplicar intereses de ${mes}`}
             </button>
-            <p className="mt-2 px-1 text-center text-[11px] leading-relaxed text-gris-claro">
+            <p className="mt-2 px-1 text-center text-[12px] leading-relaxed text-gris">
               {yaAplicado
                 ? 'Listo por este mes. Vuelve el próximo mes cuando lleguen tus nuevos extractos.'
                 : 'Úsalo una vez al mes, cuando lleguen tus nuevos extractos, para sumar los intereses que cobran los bancos.'}
@@ -132,14 +136,5 @@ export function Deudas({ onAbonar }: { onAbonar: (deudaId: string) => void }) {
         ordenSugerido={ordenSugerido}
       />
     </>
-  )
-}
-
-function Mini({ label, valor }: { label: string; valor: string }) {
-  return (
-    <div className="rounded-2xl bg-white p-3.5 shadow-suave">
-      <p className="text-[11px] font-medium text-gris">{label}</p>
-      <p className="mt-0.5 text-lg font-bold tracking-tight">{valor}</p>
-    </div>
   )
 }

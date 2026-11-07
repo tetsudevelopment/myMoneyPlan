@@ -142,7 +142,7 @@ export function AuthScreen() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && enviar()}
-                    className="w-full rounded-2xl border-[1.5px] border-linea bg-white py-3.5 pl-11 pr-3.5 text-base outline-none transition focus:border-verde-vivo focus:ring-4 focus:ring-verde-vivo/15"
+                    className="field !rounded-2xl !py-3.5 pl-11 pr-3.5"
                   />
                 </Campo>
 
@@ -155,7 +155,7 @@ export function AuthScreen() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && enviar()}
-                    className="w-full rounded-2xl border-[1.5px] border-linea bg-white py-3.5 pl-11 pr-12 text-base outline-none transition focus:border-verde-vivo focus:ring-4 focus:ring-verde-vivo/15"
+                    className="field !rounded-2xl !py-3.5 pl-11 pr-12"
                   />
                   <button
                     type="button"
@@ -230,7 +230,7 @@ function Campo({
 }) {
   return (
     <div>
-      <label htmlFor={htmlFor} className="mb-1.5 block text-xs font-semibold text-gris">
+      <label htmlFor={htmlFor} className="field-label">
         {label}
       </label>
       <div className="relative">

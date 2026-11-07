@@ -82,7 +82,7 @@ export function Perfil({ onAbrirPareja }: { onAbrirPareja: () => void }) {
   return (
     <div className="mx-auto max-w-2xl space-y-4">
       {/* Cabecera con avatar */}
-      <section className="flex flex-col items-center rounded-card bg-white p-6 text-center shadow-suave">
+      <section className="card flex flex-col items-center p-6 text-center">
         <div className="relative">
           <Avatar
             src={perfil.avatar}
@@ -136,7 +136,7 @@ export function Perfil({ onAbrirPareja }: { onAbrirPareja: () => void }) {
       {/* Acceso al plan en pareja (en desktop está en el menú lateral) */}
       <button
         onClick={onAbrirPareja}
-        className="flex w-full items-center gap-3 rounded-card bg-white p-4 text-left shadow-suave transition active:scale-[.99] lg:hidden"
+        className="card flex w-full items-center gap-3 text-left transition active:scale-[.99] lg:hidden"
       >
         <span className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-xl bg-verde-claro text-xl">
           💑
@@ -149,7 +149,7 @@ export function Perfil({ onAbrirPareja }: { onAbrirPareja: () => void }) {
       </button>
 
       {/* Datos personales */}
-      <section className="rounded-card bg-white p-5 shadow-suave">
+      <section className="card p-5">
         <h2 className="mb-4 text-[13px] font-semibold uppercase tracking-wide text-gris">
           Datos personales
         </h2>
@@ -176,12 +176,12 @@ export function Perfil({ onAbrirPareja }: { onAbrirPareja: () => void }) {
               disabled={!sesionEmail}
             />
             {!sesionEmail && (
-              <p className="mt-1.5 text-[11px] text-gris-claro">
+              <p className="mt-1.5 text-[12px] text-gris">
                 Inicia sesión para usar y cambiar tu correo.
               </p>
             )}
             {sesionEmail && (
-              <p className="mt-1.5 text-[11px] text-gris-claro">
+              <p className="mt-1.5 text-[12px] text-gris">
                 Al cambiarlo te enviaremos un correo de confirmación.
               </p>
             )}
@@ -189,7 +189,7 @@ export function Perfil({ onAbrirPareja }: { onAbrirPareja: () => void }) {
           <button
             onClick={guardarDatos}
             disabled={guardando}
-            className="w-full rounded-[13px] bg-verde-prof py-3.5 text-[15px] font-semibold text-crema transition active:scale-[.99] disabled:opacity-60"
+            className="btn-primary"
           >
             {guardando ? 'Guardando…' : 'Guardar cambios'}
           </button>
@@ -198,7 +198,7 @@ export function Perfil({ onAbrirPareja }: { onAbrirPareja: () => void }) {
 
       {/* Seguridad (solo con sesión) */}
       {sesionEmail && (
-        <section className="rounded-card bg-white p-5 shadow-suave">
+        <section className="card p-5">
           <h2 className="mb-4 text-[13px] font-semibold uppercase tracking-wide text-gris">
             Seguridad
           </h2>
@@ -212,7 +212,7 @@ export function Perfil({ onAbrirPareja }: { onAbrirPareja: () => void }) {
             <button
               onClick={actualizarClave}
               disabled={cambiandoPass || !pass1}
-              className="w-full rounded-[13px] border-[1.5px] border-linea bg-white py-3.5 text-[15px] font-semibold text-verde-medio transition active:scale-[.99] disabled:opacity-50"
+              className="btn-secondary text-verde-medio"
             >
               {cambiandoPass ? 'Actualizando…' : 'Cambiar contraseña'}
             </button>
@@ -221,18 +221,18 @@ export function Perfil({ onAbrirPareja }: { onAbrirPareja: () => void }) {
       )}
 
       {/* Cuenta */}
-      <section className="rounded-card bg-white p-5 shadow-suave">
+      <section className="card p-5">
         {sesionEmail ? (
           <button
             onClick={salirNube}
-            className="flex w-full items-center justify-center gap-2 rounded-[13px] bg-rojo-bg py-3.5 text-[15px] font-semibold text-rojo transition active:scale-[.99]"
+            className="btn w-full bg-rojo-bg text-rojo"
           >
             <span aria-hidden>⏏</span> Cerrar sesión
           </button>
         ) : hayNube() ? (
           <button
             onClick={abrirAuth}
-            className="flex w-full items-center justify-center gap-2 rounded-[13px] bg-verde-prof py-3.5 text-[15px] font-semibold text-crema transition active:scale-[.99]"
+            className="btn-primary"
           >
             Iniciar sesión / Crear cuenta
           </button>
@@ -249,7 +249,7 @@ export function Perfil({ onAbrirPareja }: { onAbrirPareja: () => void }) {
 function Campo({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="mb-1.5 block text-xs font-semibold text-gris">{label}</label>
+      <label className="field-label">{label}</label>
       {children}
     </div>
   )
@@ -278,7 +278,7 @@ function Input({
       value={value}
       disabled={disabled}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full rounded-xl border-[1.5px] border-linea bg-white px-3.5 py-3 text-base outline-none transition focus:border-verde-vivo focus:ring-4 focus:ring-verde-vivo/15 disabled:bg-crema disabled:text-gris"
+      className="field disabled:bg-crema disabled:text-gris"
     />
   )
 }

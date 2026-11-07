@@ -10,3 +10,7 @@ export const fmtK = (n: number): string => {
   if (v >= 1_000) return '$' + Math.round(v / 1_000) + 'k'
   return '$' + v
 }
+
+/** US$ 1,234.56 (dos decimales, formato en-US). */
+export const fmtUSD = (n: number): string =>
+  'US$ ' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })

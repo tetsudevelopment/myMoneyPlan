@@ -5,6 +5,7 @@
 // =====================================================================
 
 import type { User } from '@supabase/supabase-js'
+import { normalizarBolsillo, normalizarMoneda } from './finanzas'
 import type { Bolsillo, Categoria, Deuda, EstadoApp, Movimiento, Prestamo } from '../types'
 import { supabase } from './supabase'
 
@@ -165,14 +166,21 @@ const aModeloMov = (m: any): Movimiento => ({
   deudaId: m.deuda_id ?? undefined,
   fecha: m.fecha,
   creadoEn: m.creado_en ?? undefined,
+  // Columnas de supabase_monedas.sql: pueden no existir (COP por defecto).
+  moneda: normalizarMoneda(m.moneda) === 'USD' ? 'USD' : undefined,
+  bolsilloId: m.bolsillo_id ?? undefined,
+  tasa: m.tasa != null ? Number(m.tasa) : undefined,
 })
 
-const aModeloBolsillo = (b: any): Bolsillo => ({
-  id: b.id,
-  nombre: b.nombre,
-  saldo: Number(b.saldo),
-  creadoEn: b.creado_en ?? undefined,
-})
+const aModeloBolsillo = (b: any): Bolsillo =>
+  normalizarBolsillo({
+    id: b.id,
+    nombre: b.nombre,
+    saldo: Number(b.saldo),
+    moneda: b.moneda,
+    entidad: b.entidad ?? undefined,
+    creadoEn: b.creado_en ?? undefined,
+  })
 
 const aModeloCategoria = (c: any): Categoria => ({
   id: c.id,
@@ -250,6 +258,11 @@ const filaMov = (mov: Movimiento) => ({
   // Si el cliente trae su marca de creación, la usamos para que el orden
   // coincida con local; si no, la DB pone now() por defecto.
   ...(mov.creadoEn ? { creado_en: mov.creadoEn } : {}),
+  // Columnas nuevas (supabase_monedas.sql): solo se envían si llevan datos,
+  // así los movimientos en COP siguen funcionando con el esquema viejo.
+  ...(mov.moneda === 'USD' ? { moneda: 'USD' } : {}),
+  ...(mov.bolsilloId ? { bolsillo_id: mov.bolsilloId } : {}),
+  ...(mov.tasa ? { tasa: mov.tasa } : {}),
 })
 
 /** Inserta un movimiento nuevo en la nube. */
@@ -273,6 +286,7 @@ export async function actualizarMovimientoNube(mov: Movimiento): Promise<void> {
         descripcion: mov.desc ?? null,
         categoria: mov.cat ?? null,
         deuda_id: mov.deudaId ?? null,
+        ...(mov.moneda === 'USD' ? { bolsillo_id: mov.bolsilloId ?? null } : {}),
       })
       .eq('id', String(mov.id))
   } catch (e) {
@@ -372,21 +386,29 @@ export async function subirIntereses(
 
 // ---------- Bolsillos (CRUD en la nube) ----------
 
+// moneda/entidad (supabase_monedas.sql) solo se envían si llevan datos, para no
+// romper el esquema viejo con bolsillos COP sin entidad.
+// `limpiarEntidad`: al actualizar, manda null si el usuario quitó la entidad.
+export const extrasBolsillo = (b: Bolsillo, limpiarEntidad = false) => ({
+  ...(b.moneda === 'USD' ? { moneda: 'USD' } : {}),
+  ...(b.entidad ? { entidad: b.entidad } : limpiarEntidad ? { entidad: null } : {}),
+})
+
 export async function insertarBolsilloNube(b: Bolsillo): Promise<void> {
   if (!supabase || !usuario) return
   try {
     await supabase
       .from('bolsillos')
-      .insert({ id: b.id, user_id: usuario.id, nombre: b.nombre, saldo: b.saldo })
+      .insert({ id: b.id, user_id: usuario.id, nombre: b.nombre, saldo: b.saldo, ...extrasBolsillo(b) })
   } catch (e) {
     console.warn('Error insertando bolsillo:', e)
   }
 }
 
-export async function actualizarBolsilloNube(b: Bolsillo): Promise<void> {
+export async function actualizarBolsilloNube(b: Bolsillo, limpiarEntidad = false): Promise<void> {
   if (!supabase || !usuario) return
   try {
-    await supabase.from('bolsillos').update({ nombre: b.nombre, saldo: b.saldo }).eq('id', b.id)
+    await supabase.from('bolsillos').update({ nombre: b.nombre, saldo: b.saldo, ...extrasBolsillo(b, limpiarEntidad) }).eq('id', b.id)
   } catch (e) {
     console.warn('Error actualizando bolsillo:', e)
   }

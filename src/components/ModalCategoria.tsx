@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { SheetTitulo } from './SheetTitulo'
+import { useEscape } from '../lib/useEscape'
 import { useApp } from '../store/AppContext'
 
 const EMOJIS = ['📚', '🎓', '🏠', '🎁', '🐶', '✈️', '🏥', '👕', '🎬', '☕', '🚗', '💼', '🛠️', '💊', '🎵', '🏋️']
@@ -24,6 +26,8 @@ export function ModalCategoria({ abierto, onCerrar, onCreada }: Props) {
     setColor(COLORES[0])
   }, [abierto])
 
+  useEscape(abierto, onCerrar)
+
   if (!abierto) return null
 
   const guardar = () => {
@@ -36,12 +40,12 @@ export function ModalCategoria({ abierto, onCerrar, onCreada }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-[110] flex items-end bg-verde-prof/45 lg:items-center lg:justify-center lg:p-6"
+      className="sheet-overlay z-[110]"
       onClick={(e) => e.target === e.currentTarget && onCerrar()}
     >
-      <div className="mx-auto max-h-[88vh] w-full max-w-app overflow-y-auto rounded-t-[24px] bg-crema px-[18px] pb-[calc(22px+env(safe-area-inset-bottom))] pt-[22px] lg:max-w-sm lg:rounded-[24px] lg:pb-[22px] lg:shadow-suave-lg">
-        <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-linea lg:hidden" />
-        <h3 className="mb-4 text-lg font-bold">Nueva categoría</h3>
+      <div className="sheet">
+        <div className="sheet-grab" />
+        <SheetTitulo onCerrar={onCerrar}>Nueva categoría</SheetTitulo>
 
         {/* Vista previa */}
         <div className="mb-4 flex items-center gap-3">
@@ -54,16 +58,16 @@ export function ModalCategoria({ abierto, onCerrar, onCreada }: Props) {
           <div className="text-[15px] font-semibold text-gris">{nombre || 'Nombre…'}</div>
         </div>
 
-        <label className="mb-1.5 block text-xs font-semibold text-gris">Nombre</label>
+        <label className="field-label">Nombre</label>
         <input
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
           placeholder="Ej: Estudio"
           autoFocus
-          className="mb-4 w-full rounded-xl border-[1.5px] border-linea bg-white px-3.5 py-3 text-base outline-none focus:border-verde-vivo"
+          className="mb-4 field"
         />
 
-        <label className="mb-1.5 block text-xs font-semibold text-gris">Ícono</label>
+        <label className="field-label">Ícono</label>
         <div className="mb-4 grid grid-cols-8 gap-1.5">
           {EMOJIS.map((e) => (
             <button
@@ -78,7 +82,7 @@ export function ModalCategoria({ abierto, onCerrar, onCreada }: Props) {
           ))}
         </div>
 
-        <label className="mb-1.5 block text-xs font-semibold text-gris">Color</label>
+        <label className="field-label">Color</label>
         <div className="mb-5 flex flex-wrap gap-2">
           {COLORES.map((c) => (
             <button
@@ -95,7 +99,7 @@ export function ModalCategoria({ abierto, onCerrar, onCreada }: Props) {
 
         <button
           onClick={guardar}
-          className="w-full rounded-[13px] bg-verde-prof py-[15px] text-[15px] font-semibold text-crema transition active:scale-[.98]"
+          className="btn-primary"
         >
           Crear categoría
         </button>

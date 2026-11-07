@@ -162,16 +162,16 @@ function PasoDeudas({
           placeholder="Nombre (Ej: Tarjeta Visa)"
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
-          className="w-full rounded-lg border-[1.5px] border-linea px-3 py-2.5 text-[15px] outline-none focus:border-verde-vivo"
+          className="field"
         />
-        <div className="flex gap-2">
+        <div className="seg">
           {(['tarjeta', 'credito'] as TipoDeuda[]).map((t) => (
             <button
               key={t}
+              type="button"
               onClick={() => setTipo(t)}
-              className={`flex-1 rounded-lg border-[1.5px] py-2 text-[13px] font-semibold transition ${
-                tipo === t ? 'border-verde-prof bg-verde-prof text-crema' : 'border-linea text-gris'
-              }`}
+              aria-pressed={tipo === t}
+              className="seg-btn"
             >
               {t === 'tarjeta' ? 'Tarjeta' : 'Crédito'}
             </button>
@@ -185,7 +185,7 @@ function PasoDeudas({
             inputMode="decimal"
             value={tasaEA}
             onChange={(e) => setTasaEA(e.target.value)}
-            className="w-full rounded-lg border-[1.5px] border-linea px-3 py-2.5 text-[15px] outline-none focus:border-verde-vivo"
+            className="field"
           />
           <div className="w-full">
             <MoneyInput value={cuota} onChange={setCuota} placeholder="Cuota mensual" />
@@ -193,7 +193,7 @@ function PasoDeudas({
         </div>
         <button
           onClick={agregar}
-          className="w-full rounded-lg bg-verde-claro py-2.5 text-[13px] font-semibold text-verde-medio"
+          className="btn-soft w-full"
         >
           + Agregar a la lista
         </button>
@@ -229,7 +229,7 @@ function Boton({ onClick, children }: { onClick: () => void; children: React.Rea
   return (
     <button
       onClick={onClick}
-      className="mt-5 w-full rounded-[13px] bg-verde-prof py-[15px] text-[15px] font-semibold text-crema transition active:scale-[.99]"
+      className="mt-5 btn-primary"
     >
       {children}
     </button>
@@ -238,7 +238,7 @@ function Boton({ onClick, children }: { onClick: () => void; children: React.Rea
 
 function Secundario({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
   return (
-    <button onClick={onClick} className="mt-2 w-full py-2 text-center text-[13px] font-medium text-gris">
+    <button onClick={onClick} className="mt-2 min-h-[44px] w-full text-center text-[14px] font-medium text-gris">
       {children}
     </button>
   )

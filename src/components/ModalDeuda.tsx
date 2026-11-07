@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
+import { useEscape } from '../lib/useEscape'
 import { useApp } from '../store/AppContext'
 import type { Deuda, TipoDeuda } from '../types'
+import { SheetTitulo } from './SheetTitulo'
 import { MoneyInput } from './MoneyInput'
 
 interface Props {
@@ -41,6 +43,8 @@ export function ModalDeuda({ abierto, onCerrar, deudaEditar, ordenSugerido = 1 }
       setOrden(String(ordenSugerido))
     }
   }, [abierto, deudaEditar, ordenSugerido])
+
+  useEscape(abierto, onCerrar)
 
   if (!abierto) return null
 
@@ -85,28 +89,26 @@ export function ModalDeuda({ abierto, onCerrar, deudaEditar, ordenSugerido = 1 }
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-end bg-verde-prof/45 lg:items-center lg:justify-center lg:p-6"
+      className="sheet-overlay"
       onClick={(e) => e.target === e.currentTarget && onCerrar()}
     >
-      <div className="mx-auto max-h-[88vh] w-full max-w-app overflow-y-auto rounded-t-[24px] bg-crema px-[18px] pb-[calc(22px+env(safe-area-inset-bottom))] pt-[22px] lg:max-w-md lg:rounded-[24px] lg:pb-[22px] lg:shadow-suave-lg">
-        <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-linea lg:hidden" />
-        <h3 className="mb-4 text-lg font-bold">{editando ? 'Editar deuda' : 'Nueva deuda'}</h3>
+      <div className="sheet lg:max-w-md">
+        <div className="sheet-grab" />
+        <SheetTitulo onCerrar={onCerrar}>{editando ? 'Editar deuda' : 'Nueva deuda'}</SheetTitulo>
 
         <Campo label="Nombre">
           <Input value={nombre} onChange={setNombre} placeholder="Ej: Tarjeta Visa, Préstamo..." />
         </Campo>
 
         <Campo label="Tipo">
-          <div className="flex gap-2">
+          <div className="seg">
             {(['tarjeta', 'credito'] as TipoDeuda[]).map((t) => (
               <button
                 key={t}
+                type="button"
                 onClick={() => setTipo(t)}
-                className={`flex-1 rounded-xl border-[1.5px] py-2.5 text-sm font-semibold capitalize transition ${
-                  tipo === t
-                    ? 'border-verde-prof bg-verde-prof text-crema'
-                    : 'border-linea bg-white text-gris'
-                }`}
+                aria-pressed={tipo === t}
+                className="seg-btn"
               >
                 {t === 'tarjeta' ? 'Tarjeta' : 'Crédito'}
               </button>
@@ -133,7 +135,7 @@ export function ModalDeuda({ abierto, onCerrar, deudaEditar, ordenSugerido = 1 }
 
         <button
           onClick={guardar}
-          className="mt-1 w-full rounded-[13px] bg-verde-prof py-[15px] text-[15px] font-semibold text-crema transition active:scale-[.98]"
+          className="mt-1 btn-primary"
         >
           {editando ? 'Guardar cambios' : 'Agregar deuda'}
         </button>
@@ -141,7 +143,7 @@ export function ModalDeuda({ abierto, onCerrar, deudaEditar, ordenSugerido = 1 }
         {editando && (
           <button
             onClick={borrar}
-            className="mt-2.5 w-full rounded-[13px] border-[1.5px] border-linea bg-white py-3 text-sm font-semibold text-rojo transition active:scale-[.98]"
+            className="btn-danger mt-2.5"
           >
             Eliminar deuda
           </button>
@@ -153,8 +155,8 @@ export function ModalDeuda({ abierto, onCerrar, deudaEditar, ordenSugerido = 1 }
 
 function Campo({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="mb-3.5">
-      <label className="mb-1.5 block text-xs font-semibold text-gris">{label}</label>
+    <div className="mb-4">
+      <label className="field-label">{label}</label>
       {children}
     </div>
   )
@@ -180,7 +182,7 @@ function Input({
       placeholder={placeholder}
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full rounded-xl border-[1.5px] border-linea bg-white px-3.5 py-3 text-base outline-none transition focus:border-verde-vivo focus:ring-4 focus:ring-verde-vivo/15"
+      className="field"
     />
   )
 }

@@ -27,7 +27,9 @@ export default {
       },
       boxShadow: {
         suave: '0 1px 3px rgba(15,42,36,0.06), 0 1px 2px rgba(15,42,36,0.04)',
-        'suave-lg': '0 4px 16px rgba(15,42,36,0.08)',
+        'suave-lg': '0 8px 24px rgba(15,42,36,0.14)',
+        sheet: '0 -8px 32px rgba(15,42,36,0.18)',
+        fab: '0 8px 20px rgba(29,158,117,0.38), 0 2px 6px rgba(15,42,36,0.12)',
       },
       maxWidth: {
         app: '480px',

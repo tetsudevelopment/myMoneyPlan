@@ -19,8 +19,17 @@ import { AuthScreen } from '../components/AuthScreen'
 import { ConfirmDialog, type ConfirmOpts } from '../components/ConfirmDialog'
 import { Onboarding } from '../components/Onboarding'
 import { hoy, mesActual } from '../lib/fechas'
-import { aplicarAbono, aplicarIntereses, deudasVivas } from '../lib/finanzas'
-import { fmt } from '../lib/format'
+import {
+  ajustarBolsillosIngresoUSD,
+  aplicarAbono,
+  aplicarDeltaBolsillo,
+  aplicarIntereses,
+  convertirUSDaCOP,
+  desvincularBolsillo,
+  deudasVivas,
+  puedeRestar,
+} from '../lib/finanzas'
+import { fmt, fmtUSD } from '../lib/format'
 import { nuevoId } from '../lib/id'
 import { procesarImagen } from '../lib/imagen'
 import { hayNube } from '../lib/supabase'
@@ -60,6 +69,7 @@ import type {
   Categoria,
   Deuda,
   EstadoApp,
+  Moneda,
   Movimiento,
   Perfil,
   Prestamo,
@@ -76,6 +86,9 @@ export interface NuevoMovimiento {
   desc?: string
   cat?: string
   deudaId?: string
+  /** Solo ingresos: 'USD' suma al bolsillo `bolsilloId` (se crea "Dólares" si falta). */
+  moneda?: Moneda
+  bolsilloId?: string
 }
 
 export interface CambiosMovimiento {
@@ -83,6 +96,8 @@ export interface CambiosMovimiento {
   desc?: string
   cat?: string
   deudaId?: string
+  /** Solo ingresos USD: cambia el bolsillo destino. */
+  bolsilloId?: string
 }
 
 export interface ResultadoRegistro {
@@ -97,7 +112,8 @@ interface AppContextValue {
   onboarded: boolean
   // movimientos
   registrarMovimiento: (input: NuevoMovimiento) => void
-  editarMovimiento: (id: string | number, cambios: CambiosMovimiento) => void
+  /** false si se bloqueó (p. ej. saldo USD insuficiente para revertir). */
+  editarMovimiento: (id: string | number, cambios: CambiosMovimiento) => boolean
   eliminarMovimiento: (id: string | number) => Promise<void>
   // deudas
   agregarDeuda: (datos: Omit<Deuda, 'id'>) => void
@@ -105,9 +121,15 @@ interface AppContextValue {
   eliminarDeuda: (id: string) => Promise<void>
   aplicarInteresesMes: () => Promise<void>
   // bolsillos (ahorro)
-  agregarBolsillo: (nombre: string, saldo: number) => void
+  agregarBolsillo: (datos: {
+    nombre: string
+    saldo: number
+    moneda?: Moneda
+    entidad?: string
+  }) => void
   ajustarBolsillo: (id: string, delta: number) => void
-  editarBolsillo: (id: string, nombre: string) => void
+  editarBolsillo: (id: string, cambios: { nombre: string; entidad?: string }) => void
+  convertirBolsilloUSD: (id: string, montoUSD: number, tasa: number) => void
   eliminarBolsillo: (id: string) => Promise<void>
   // préstamos (dinero prestado)
   agregarPrestamo: (datos: { persona: string; monto: number; fecha: string; nota?: string }) => void
@@ -255,15 +277,44 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       const prev = estadoRef.current
       let deudas = prev.deudas
+      let bolsillos = prev.bolsillos
       let saldoNuevo: number | null = null
+      let bolsilloCreado: Bolsillo | undefined
+      let bolsilloTocado: Bolsillo | undefined
       if (mov.tipo === 'abono' && mov.deudaId) {
         deudas = aplicarAbono(prev.deudas, mov.deudaId, mov.monto)
         saldoNuevo = deudas.find((d) => d.id === mov.deudaId)?.saldo ?? null
       }
-      const nuevo: EstadoApp = { ...prev, deudas, movimientos: [...prev.movimientos, mov] }
+      if (mov.tipo === 'ingreso' && mov.moneda === 'USD') {
+        // Destino: el elegido, el primer bolsillo USD, o uno nuevo "Dólares".
+        const destino =
+          bolsillos.find((b) => b.id === mov.bolsilloId && b.moneda === 'USD') ??
+          bolsillos.find((b) => b.moneda === 'USD')
+        if (destino) {
+          mov.bolsilloId = destino.id
+          bolsillos = aplicarDeltaBolsillo(bolsillos, destino.id, mov.monto)
+          bolsilloTocado = bolsillos.find((b) => b.id === destino.id)
+        } else {
+          bolsilloCreado = {
+            id: nuevoId(),
+            nombre: 'Dólares',
+            saldo: mov.monto,
+            moneda: 'USD',
+            creadoEn: new Date().toISOString(),
+          }
+          mov.bolsilloId = bolsilloCreado.id
+          bolsillos = [...bolsillos, bolsilloCreado]
+        }
+      }
+      const nuevo: EstadoApp = { ...prev, deudas, bolsillos, movimientos: [...prev.movimientos, mov] }
       setEstado(nuevo)
       guardarLocal(nuevo)
-      void insertarMovimientoNube(mov)
+      // El bolsillo nuevo va primero: movimientos.bolsillo_id lo referencia.
+      void (async () => {
+        if (bolsilloCreado) await insertarBolsilloNube(bolsilloCreado)
+        await insertarMovimientoNube(mov)
+        if (bolsilloTocado) await actualizarBolsilloNube(bolsilloTocado)
+      })()
       if (mov.tipo === 'abono' && mov.deudaId && saldoNuevo !== null) {
         void actualizarSaldoDeudaNube(mov.deudaId, saldoNuevo)
       }
@@ -273,11 +324,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   )
 
   const editarMovimiento = useCallback(
-    (id: string | number, cambios: CambiosMovimiento) => {
+    (id: string | number, cambios: CambiosMovimiento): boolean => {
       const prev = estadoRef.current
       const viejo = prev.movimientos.find((m) => m.id === id)
-      if (!viejo) return
+      if (!viejo) return false
       const nuevoMov: Movimiento = { ...viejo, ...cambios }
+      // Un bolsillo que ya no existe no se arrastra (evita FK rota en la nube).
+      if (nuevoMov.bolsilloId && !prev.bolsillos.some((b) => b.id === nuevoMov.bolsilloId)) {
+        nuevoMov.bolsilloId = undefined
+      }
       let deudas = prev.deudas
       const afectadas = new Set<string>()
       if (viejo.tipo === 'abono') {
@@ -294,16 +349,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
           return saldo === d.saldo ? d : { ...d, saldo }
         })
       }
+      // Ingreso USD: revierte el aporte viejo y aplica el nuevo (como los abonos).
+      let bolsillos = prev.bolsillos
+      const bolsillosAfectados = new Set<string>()
+      if (viejo.tipo === 'ingreso' && viejo.moneda === 'USD') {
+        const r = ajustarBolsillosIngresoUSD(prev.bolsillos, viejo, nuevoMov)
+        if (r.error) {
+          notificar(r.error)
+          return false
+        }
+        bolsillos = r.bolsillos
+        r.afectados.forEach((bid) => bolsillosAfectados.add(bid))
+      }
       const movimientos = prev.movimientos.map((m) => (m.id === id ? nuevoMov : m))
-      const nuevo: EstadoApp = { ...prev, deudas, movimientos }
+      const nuevo: EstadoApp = { ...prev, deudas, bolsillos, movimientos }
       setEstado(nuevo)
       guardarLocal(nuevo)
       void actualizarMovimientoNube(nuevoMov)
+      bolsillosAfectados.forEach((bid) => {
+        const b = bolsillos.find((x) => x.id === bid)
+        if (b) void actualizarBolsilloNube(b)
+      })
       afectadas.forEach((did) => {
         const s = deudas.find((d) => d.id === did)?.saldo
         if (s !== undefined) void actualizarSaldoDeudaNube(did, s)
       })
       notificar('Movimiento actualizado')
+      return true
     },
     [notificar],
   )
@@ -312,12 +384,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     async (id: string | number) => {
       const mov = estadoRef.current.movimientos.find((m) => m.id === id)
       if (!mov) return
+      if (mov.tipo === 'ingreso' && mov.moneda === 'USD') {
+        const r = ajustarBolsillosIngresoUSD(estadoRef.current.bolsillos, mov, null)
+        if (r.error) return notificar(r.error)
+      }
       const ok = await pedirConfirmacion({
         titulo: 'Eliminar movimiento',
         mensaje:
           mov.tipo === 'abono'
             ? 'Se eliminará el abono y el saldo de la deuda volverá a subir.'
-            : '¿Seguro que quieres eliminar este movimiento?',
+            : mov.moneda === 'USD'
+              ? 'Se eliminará el ingreso y se descontará del bolsillo en dólares.'
+              : '¿Seguro que quieres eliminar este movimiento?',
         confirmar: 'Eliminar',
         peligroso: true,
       })
@@ -332,14 +410,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const s = deudas.find((d) => d.id === mov.deudaId)?.saldo
         if (s !== undefined) saldoActualizado = { id: mov.deudaId, saldo: s }
       }
+      let bolsillos = prev.bolsillos
+      let bolsilloActualizado: Bolsillo | undefined
+      if (mov.tipo === 'ingreso' && mov.moneda === 'USD') {
+        const r = ajustarBolsillosIngresoUSD(prev.bolsillos, mov, null)
+        if (r.error) return notificar(r.error) // el saldo pudo cambiar durante la confirmación
+        bolsillos = r.bolsillos
+        bolsilloActualizado = bolsillos.find((b) => b.id === mov.bolsilloId)
+      }
       const nuevo: EstadoApp = {
         ...prev,
         deudas,
+        bolsillos,
         movimientos: prev.movimientos.filter((m) => m.id !== id),
       }
       setEstado(nuevo)
       guardarLocal(nuevo)
       void eliminarMovimientoNube(String(id))
+      if (bolsilloActualizado) void actualizarBolsilloNube(bolsilloActualizado)
       if (saldoActualizado) void actualizarSaldoDeudaNube(saldoActualizado.id, saldoActualizado.saldo)
       notificar('Movimiento eliminado')
     },
@@ -432,8 +520,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // --- Bolsillos (ahorro) ---
 
   const agregarBolsillo = useCallback(
-    (nombre: string, saldo: number) => {
-      const b: Bolsillo = { id: nuevoId(), nombre, saldo, creadoEn: new Date().toISOString() }
+    (datos: { nombre: string; saldo: number; moneda?: Moneda; entidad?: string }) => {
+      const b: Bolsillo = {
+        id: nuevoId(),
+        nombre: datos.nombre,
+        saldo: datos.saldo,
+        moneda: datos.moneda ?? 'COP',
+        ...(datos.entidad ? { entidad: datos.entidad } : {}),
+        creadoEn: new Date().toISOString(),
+      }
       const prev = estadoRef.current
       const nuevo: EstadoApp = { ...prev, bolsillos: [...prev.bolsillos, b] }
       setEstado(nuevo)
@@ -447,12 +542,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const ajustarBolsillo = useCallback(
     (id: string, delta: number) => {
       const prev = estadoRef.current
-      let actualizado: Bolsillo | undefined
-      const bolsillos = prev.bolsillos.map((b) => {
-        if (b.id !== id) return b
-        actualizado = { ...b, saldo: Math.max(0, b.saldo + delta) }
-        return actualizado
-      })
+      if (delta < 0 && !puedeRestar(prev.bolsillos, id, -delta)) {
+        notificar('No puedes retirar más de lo que hay en el bolsillo')
+        return
+      }
+      const bolsillos = aplicarDeltaBolsillo(prev.bolsillos, id, delta)
+      const actualizado = bolsillos.find((b) => b.id === id)
       const nuevo: EstadoApp = { ...prev, bolsillos }
       setEstado(nuevo)
       guardarLocal(nuevo)
@@ -462,32 +557,80 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [notificar],
   )
 
-  const editarBolsillo = useCallback((id: string, nombre: string) => {
-    const prev = estadoRef.current
-    let actualizado: Bolsillo | undefined
-    const bolsillos = prev.bolsillos.map((b) => {
-      if (b.id !== id) return b
-      actualizado = { ...b, nombre }
-      return actualizado
-    })
-    const nuevo: EstadoApp = { ...prev, bolsillos }
-    setEstado(nuevo)
-    guardarLocal(nuevo)
-    if (actualizado) void actualizarBolsilloNube(actualizado)
-  }, [])
+  const editarBolsillo = useCallback(
+    (id: string, cambios: { nombre: string; entidad?: string }) => {
+      const prev = estadoRef.current
+      let actualizado: Bolsillo | undefined
+      let limpiarEntidad = false
+      const bolsillos = prev.bolsillos.map((b) => {
+        if (b.id !== id) return b
+        limpiarEntidad = !!b.entidad && !cambios.entidad
+        actualizado = { ...b, nombre: cambios.nombre, entidad: cambios.entidad || undefined }
+        return actualizado
+      })
+      const nuevo: EstadoApp = { ...prev, bolsillos }
+      setEstado(nuevo)
+      guardarLocal(nuevo)
+      if (actualizado) void actualizarBolsilloNube(actualizado, limpiarEntidad)
+    },
+    [],
+  )
+
+  // Convierte dólares de un bolsillo USD a pesos: baja el bolsillo y crea un
+  // ingreso COP (con la tasa) para que cuente en las stats del mes.
+  const convertirBolsilloUSD = useCallback(
+    (id: string, montoUSD: number, tasa: number) => {
+      const prev = estadoRef.current
+      const origen = prev.bolsillos.find((b) => b.id === id)
+      if (!origen || origen.moneda !== 'USD') return
+      const cop = convertirUSDaCOP(montoUSD, tasa)
+      if (!puedeRestar(prev.bolsillos, id, montoUSD) || cop <= 0) {
+        notificar('Revisa el monto y la tasa')
+        return
+      }
+      const bolsillos = aplicarDeltaBolsillo(prev.bolsillos, id, -montoUSD)
+      const actualizado = bolsillos.find((b) => b.id === id)
+      const mov: Movimiento = {
+        id: nuevoId(),
+        tipo: 'ingreso',
+        monto: cop,
+        moneda: 'COP',
+        tasa,
+        desc: `Conversión ${fmtUSD(montoUSD)} · tasa ${fmt(tasa)}`,
+        fecha: hoy(),
+        creadoEn: new Date().toISOString(),
+      }
+      const nuevo: EstadoApp = { ...prev, bolsillos, movimientos: [...prev.movimientos, mov] }
+      setEstado(nuevo)
+      guardarLocal(nuevo)
+      if (actualizado) void actualizarBolsilloNube(actualizado)
+      void insertarMovimientoNube(mov)
+      notificar('Convertiste ' + fmtUSD(montoUSD) + ' a ' + fmt(cop))
+    },
+    [notificar],
+  )
 
   const eliminarBolsillo = useCallback(
     async (id: string) => {
       const b = estadoRef.current.bolsillos.find((x) => x.id === id)
+      const refs = estadoRef.current.movimientos.filter((m) => m.bolsilloId === id).length
+      const aviso = refs
+        ? ` Tiene ${refs} ${refs === 1 ? 'ingreso en dólares asociado' : 'ingresos en dólares asociados'}: se conservarán, pero ya no podrás revertirlos contra este bolsillo.`
+        : ''
       const ok = await pedirConfirmacion({
         titulo: 'Eliminar bolsillo',
-        mensaje: `¿Eliminar "${b?.nombre ?? 'este bolsillo'}"? Se perderá su saldo registrado.`,
+        mensaje: `¿Eliminar "${b?.nombre ?? 'este bolsillo'}"? Se perderá su saldo registrado.${aviso}`,
         confirmar: 'Eliminar',
         peligroso: true,
       })
       if (!ok) return
       const prev = estadoRef.current
-      const nuevo: EstadoApp = { ...prev, bolsillos: prev.bolsillos.filter((x) => x.id !== id) }
+      const nuevo: EstadoApp = {
+        ...prev,
+        bolsillos: prev.bolsillos.filter((x) => x.id !== id),
+        // La nube ya pone bolsillo_id = null (FK on delete set null); espejo local.
+        movimientos: desvincularBolsillo(prev.movimientos, id),
+      }
       setEstado(nuevo)
       guardarLocal(nuevo)
       void eliminarBolsilloNube(id)
@@ -732,6 +875,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       agregarBolsillo,
       ajustarBolsillo,
       editarBolsillo,
+      convertirBolsilloUSD,
       eliminarBolsillo,
       agregarPrestamo,
       abonarPrestamo,
@@ -768,6 +912,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       agregarBolsillo,
       ajustarBolsillo,
       editarBolsillo,
+      convertirBolsilloUSD,
       eliminarBolsillo,
       agregarPrestamo,
       abonarPrestamo,
@@ -801,7 +946,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         <ConfirmDialog opts={confirmState.opts} onResponder={responderConfirm} />
       )}
       {toast && (
-        <div className="fixed bottom-[calc(90px+env(safe-area-inset-bottom))] left-1/2 z-[200] -translate-x-1/2 whitespace-nowrap rounded-xl bg-verde-prof px-5 py-3 text-[13px] font-medium text-crema shadow-suave-lg">
+        <div
+          role="status"
+          className="fixed bottom-[calc(100px+env(safe-area-inset-bottom))] left-1/2 z-[200] w-max max-w-[calc(100vw-32px)] -translate-x-1/2 rounded-2xl bg-carbon px-5 py-3.5 text-center text-[14px] font-medium text-crema shadow-suave-lg [animation:toast-in_220ms_cubic-bezier(0.22,1,0.36,1)_both]"
+        >
           {toast}
         </div>
       )}

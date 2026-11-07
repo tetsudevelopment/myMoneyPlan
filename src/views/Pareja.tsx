@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { MoneyInput } from '../components/MoneyInput'
+import { SheetTitulo } from '../components/SheetTitulo'
 import { repartoProporcional } from '../lib/finanzas'
 import { fmt } from '../lib/format'
+import { useEscape } from '../lib/useEscape'
 import { useApp } from '../store/AppContext'
 import { usePareja } from '../store/usePareja'
 import type { EspacioGasto } from '../types'
@@ -52,14 +54,14 @@ export function Pareja() {
   return (
     <>
       {/* Encabezado del espacio + invitar */}
-      <section className="mb-4 rounded-card bg-white p-[18px] shadow-suave">
+      <section className="mb-4 card p-[18px]">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <div className="text-[13px] font-semibold uppercase tracking-wide text-gris">Espacio</div>
             <div className="truncate text-lg font-bold">{p.espacio.nombre}</div>
           </div>
           <div className="flex-shrink-0 text-right">
-            <div className="text-[10px] uppercase tracking-wide text-gris-claro">Código para invitar</div>
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-gris">Código para invitar</div>
             <button
               onClick={() => {
                 navigator.clipboard?.writeText(p.espacio!.codigo).catch(() => {})
@@ -79,7 +81,7 @@ export function Pareja() {
       </section>
 
       {/* Ingresos de cada quien */}
-      <section className="mb-4 rounded-card bg-white p-[18px] shadow-suave">
+      <section className="mb-4 card p-[18px]">
         <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-wide text-gris">Ingresos</h2>
         <div className="space-y-2">
           {p.miembros.map((m) => (
@@ -93,14 +95,14 @@ export function Pareja() {
         </div>
         <button
           onClick={() => setModalDatos(true)}
-          className="mt-3 w-full rounded-[11px] bg-verde-claro py-2.5 text-[13px] font-semibold text-verde-medio"
+          className="btn-soft mt-3 w-full"
         >
           Editar mi nombre e ingreso
         </button>
       </section>
 
       {/* Gastos compartidos por categoría */}
-      <section className="mb-4 rounded-card bg-white p-[18px] shadow-suave">
+      <section className="mb-4 card p-[18px]">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-[13px] font-semibold uppercase tracking-wide text-gris">
             Gastos del mes
@@ -133,14 +135,14 @@ export function Pareja() {
         )}
         <button
           onClick={() => setModalGasto('nuevo')}
-          className="mt-3 w-full rounded-[11px] border-[1.5px] border-dashed border-linea py-2.5 text-[13px] font-semibold text-verde-medio"
+          className="btn-dashed mt-3 min-h-[44px] text-[14px]"
         >
           + Agregar gasto
         </button>
       </section>
 
       {/* Reparto proporcional */}
-      <section className="rounded-card bg-gradient-to-br from-verde-prof to-verde-medio p-[18px] text-crema shadow-suave-lg lg:p-7">
+      <section className="hero">
         <div className="text-xs font-medium opacity-70">CÓMO SE REPARTE</div>
         <p className="mb-3 mt-0.5 text-[12.5px] opacity-65">Proporcional a lo que gana cada uno</p>
         {total === 0 ? (
@@ -230,7 +232,7 @@ function CrearOUnirse({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-card bg-white p-5 text-center shadow-suave">
+      <div className="card p-5 text-center">
         <div className="mb-2 text-4xl">💑</div>
         <div className="text-[15px] font-semibold">Plan en pareja</div>
         <p className="mx-auto mt-1 max-w-sm text-[13px] text-gris">
@@ -238,35 +240,37 @@ function CrearOUnirse({
         </p>
       </div>
 
-      <section className="rounded-card bg-white p-5 shadow-suave">
+      <section className="card p-5">
         <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-wide text-gris">Crear un espacio</h2>
         <input
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
+          aria-label="Nombre del espacio"
           placeholder="Nombre (ej: Nuestro hogar)"
-          className="mb-3 w-full rounded-xl border-[1.5px] border-linea bg-white px-3.5 py-3 text-base outline-none focus:border-verde-vivo"
+          className="mb-3 field"
         />
         <button
           onClick={() => hacer(() => crear(nombre), 'No se pudo crear')}
           disabled={cargando}
-          className="w-full rounded-[13px] bg-verde-prof py-3.5 text-[15px] font-semibold text-crema disabled:opacity-60"
+          className="btn-primary"
         >
           Crear espacio
         </button>
       </section>
 
-      <section className="rounded-card bg-white p-5 shadow-suave">
+      <section className="card p-5">
         <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-wide text-gris">Unirme con un código</h2>
         <input
           value={codigo}
           onChange={(e) => setCodigo(e.target.value.toUpperCase())}
+          aria-label="Código de invitación"
           placeholder="Código (ej: A1B2C3)"
-          className="mb-3 w-full rounded-xl border-[1.5px] border-linea bg-white px-3.5 py-3 text-center text-base font-mono tracking-widest outline-none focus:border-verde-vivo"
+          className="mb-3 field text-center font-mono tracking-widest"
         />
         <button
           onClick={() => hacer(() => unirse(codigo), 'No se pudo unir')}
           disabled={cargando || codigo.trim().length < 4}
-          className="w-full rounded-[13px] border-[1.5px] border-linea bg-white py-3.5 text-[15px] font-semibold text-verde-medio disabled:opacity-50"
+          className="btn-secondary text-verde-medio"
         >
           Unirme
         </button>
@@ -299,20 +303,21 @@ function ModalMisDatos({
   const [ingreso, setIngreso] = useState(ingresoInicial ? String(Math.round(ingresoInicial)) : '')
   return (
     <Sheet titulo="Mis datos" onCerrar={onCerrar}>
-      <label className="mb-1.5 block text-xs font-semibold text-gris">Tu nombre</label>
+      <label htmlFor="pareja-nombre" className="field-label">Tu nombre</label>
       <input
+        id="pareja-nombre"
         value={nombre}
         onChange={(e) => setNombre(e.target.value)}
         placeholder="Tu nombre"
-        className="mb-3.5 w-full rounded-xl border-[1.5px] border-linea bg-white px-3.5 py-3 text-base outline-none focus:border-verde-vivo"
+        className="mb-4 field"
       />
-      <label className="mb-1.5 block text-xs font-semibold text-gris">Tu ingreso mensual</label>
+      <label htmlFor="pareja-ingreso" className="field-label">Tu ingreso mensual</label>
       <div className="mb-4">
-        <MoneyInput value={ingreso} onChange={setIngreso} />
+        <MoneyInput id="pareja-ingreso" value={ingreso} onChange={setIngreso} />
       </div>
       <button
         onClick={() => onGuardar(nombre.trim(), parseFloat(ingreso) || 0)}
-        className="w-full rounded-[13px] bg-verde-prof py-[15px] text-[15px] font-semibold text-crema"
+        className="btn-primary"
       >
         Guardar
       </button>
@@ -336,17 +341,18 @@ function ModalGasto({
   const [monto, setMonto] = useState(gasto ? String(Math.round(gasto.montoMensual)) : '')
   return (
     <Sheet titulo={gasto ? 'Editar gasto' : 'Nuevo gasto'} onCerrar={onCerrar}>
-      <label className="mb-1.5 block text-xs font-semibold text-gris">Nombre</label>
+      <label htmlFor="gasto-nombre" className="field-label">Nombre</label>
       <input
+        id="gasto-nombre"
         value={nombre}
         onChange={(e) => setNombre(e.target.value)}
         placeholder="Ej: Arriendo, Comida, Servicios..."
         autoFocus
-        className="mb-3.5 w-full rounded-xl border-[1.5px] border-linea bg-white px-3.5 py-3 text-base outline-none focus:border-verde-vivo"
+        className="mb-4 field"
       />
-      <label className="mb-1.5 block text-xs font-semibold text-gris">Monto mensual</label>
+      <label htmlFor="gasto-monto" className="field-label">Monto mensual</label>
       <div className="mb-4">
-        <MoneyInput value={monto} onChange={setMonto} />
+        <MoneyInput id="gasto-monto" value={monto} onChange={setMonto} />
       </div>
       <button
         onClick={() => {
@@ -355,14 +361,14 @@ function ModalGasto({
           if (!v || v <= 0) return notificar('Ingresa un monto válido')
           onGuardar(nombre.trim(), v)
         }}
-        className="w-full rounded-[13px] bg-verde-prof py-[15px] text-[15px] font-semibold text-crema"
+        className="btn-primary"
       >
         Guardar
       </button>
       {onEliminar && (
         <button
           onClick={onEliminar}
-          className="mt-2.5 w-full rounded-[13px] border-[1.5px] border-linea bg-white py-3 text-sm font-semibold text-rojo"
+          className="btn-danger mt-2.5"
         >
           Eliminar
         </button>
@@ -372,14 +378,15 @@ function ModalGasto({
 }
 
 function Sheet({ titulo, onCerrar, children }: { titulo: string; onCerrar: () => void; children: React.ReactNode }) {
+  useEscape(true, onCerrar)
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-end bg-verde-prof/45 lg:items-center lg:justify-center lg:p-6"
+      className="sheet-overlay"
       onClick={(e) => e.target === e.currentTarget && onCerrar()}
     >
-      <div className="mx-auto w-full max-w-app rounded-t-[24px] bg-crema px-[18px] pb-[calc(22px+env(safe-area-inset-bottom))] pt-[22px] lg:max-w-sm lg:rounded-[24px] lg:pb-[22px] lg:shadow-suave-lg">
-        <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-linea lg:hidden" />
-        <h3 className="mb-4 text-lg font-bold">{titulo}</h3>
+      <div className="sheet">
+        <div className="sheet-grab" />
+        <SheetTitulo onCerrar={onCerrar}>{titulo}</SheetTitulo>
         {children}
       </div>
     </div>
@@ -398,14 +405,14 @@ function Centro({
   accion?: { label: string; onClick: () => void }
 }) {
   return (
-    <div className="rounded-card bg-white px-6 py-12 text-center shadow-suave">
+    <div className="card px-6 py-12 text-center">
       <div className="mb-2 text-4xl">{ico}</div>
       <div className="text-[15px] font-semibold">{titulo}</div>
       <p className="mx-auto mt-1 max-w-sm text-[13px] text-gris">{texto}</p>
       {accion && (
         <button
           onClick={accion.onClick}
-          className="mt-4 rounded-[13px] bg-verde-prof px-5 py-3 text-sm font-semibold text-crema"
+          className="btn mt-4 bg-verde-prof px-6 text-crema"
         >
           {accion.label}
         </button>

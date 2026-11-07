@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { hoy } from '../lib/fechas'
+import { useEscape } from '../lib/useEscape'
 import { useApp } from '../store/AppContext'
+import { SheetTitulo } from './SheetTitulo'
 import { MoneyInput } from './MoneyInput'
 
 interface Props {
@@ -24,6 +26,8 @@ export function ModalPrestamo({ abierto, onCerrar }: Props) {
     setNota('')
   }, [abierto])
 
+  useEscape(abierto, onCerrar)
+
   if (!abierto) return null
 
   const guardar = () => {
@@ -37,12 +41,12 @@ export function ModalPrestamo({ abierto, onCerrar }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-end bg-verde-prof/45 lg:items-center lg:justify-center lg:p-6"
+      className="sheet-overlay"
       onClick={(e) => e.target === e.currentTarget && onCerrar()}
     >
-      <div className="mx-auto max-h-[88vh] w-full max-w-app overflow-y-auto rounded-t-[24px] bg-crema px-[18px] pb-[calc(22px+env(safe-area-inset-bottom))] pt-[22px] lg:max-w-md lg:rounded-[24px] lg:pb-[22px] lg:shadow-suave-lg">
-        <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-linea lg:hidden" />
-        <h3 className="mb-4 text-lg font-bold">Nuevo préstamo</h3>
+      <div className="sheet lg:max-w-md">
+        <div className="sheet-grab" />
+        <SheetTitulo onCerrar={onCerrar}>Nuevo préstamo</SheetTitulo>
 
         <Campo label="¿A quién le prestaste?">
           <input
@@ -50,7 +54,7 @@ export function ModalPrestamo({ abierto, onCerrar }: Props) {
             onChange={(e) => setPersona(e.target.value)}
             placeholder="Nombre de la persona"
             autoFocus
-            className="w-full rounded-xl border-[1.5px] border-linea bg-white px-3.5 py-3 text-base outline-none focus:border-verde-vivo"
+            className="field"
           />
         </Campo>
 
@@ -63,7 +67,7 @@ export function ModalPrestamo({ abierto, onCerrar }: Props) {
             type="date"
             value={fecha}
             onChange={(e) => setFecha(e.target.value)}
-            className="w-full rounded-xl border-[1.5px] border-linea bg-white px-3.5 py-3 text-base outline-none focus:border-verde-vivo"
+            className="field"
           />
         </Campo>
 
@@ -72,13 +76,13 @@ export function ModalPrestamo({ abierto, onCerrar }: Props) {
             value={nota}
             onChange={(e) => setNota(e.target.value)}
             placeholder="Ej: para el arriendo"
-            className="w-full rounded-xl border-[1.5px] border-linea bg-white px-3.5 py-3 text-base outline-none focus:border-verde-vivo"
+            className="field"
           />
         </Campo>
 
         <button
           onClick={guardar}
-          className="w-full rounded-[13px] bg-verde-prof py-[15px] text-[15px] font-semibold text-crema transition active:scale-[.98]"
+          className="btn-primary"
         >
           Registrar préstamo
         </button>
@@ -89,8 +93,8 @@ export function ModalPrestamo({ abierto, onCerrar }: Props) {
 
 function Campo({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="mb-3.5">
-      <label className="mb-1.5 block text-xs font-semibold text-gris">{label}</label>
+    <div className="mb-4">
+      <label className="field-label">{label}</label>
       {children}
     </div>
   )

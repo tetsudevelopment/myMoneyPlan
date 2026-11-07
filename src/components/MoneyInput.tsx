@@ -1,6 +1,28 @@
-// Campo de moneda: muestra el valor formateado en pesos (es-CO) con prefijo $
-// mientras se escribe. Internamente trabaja con dígitos crudos (sin separadores),
-// así el padre puede hacer parseFloat(value) sin problemas.
+// Campo de moneda: muestra el valor formateado mientras se escribe.
+// - COP (por defecto): pesos es-CO con prefijo $, solo enteros.
+// - USD: prefijo US$, formato en-US y hasta 2 decimales.
+// Internamente trabaja con un string crudo ("50000" o "1234.5") para que el
+// padre pueda hacer parseFloat(value) sin problemas.
+
+import type { Moneda } from '../types'
+
+/** Limpia lo escrito a un string numérico crudo según la moneda. */
+export function limpiarMonto(texto: string, moneda: Moneda): string {
+  if (moneda === 'COP') return texto.replace(/\D/g, '')
+  const limpio = texto.replace(/[^\d.]/g, '')
+  const [ent, ...resto] = limpio.split('.')
+  if (resto.length === 0) return ent
+  return `${ent}.${resto.join('').slice(0, 2)}`
+}
+
+/** Valor crudo -> texto con separadores de miles (conserva el punto/decimales). */
+export function formatearMonto(value: string, moneda: Moneda): string {
+  if (!value) return ''
+  if (moneda === 'COP') return Number(value).toLocaleString('es-CO')
+  const [ent, dec] = value.split('.')
+  const entFmt = ent ? Number(ent).toLocaleString('en-US') : '0'
+  return dec === undefined ? entFmt : `${entFmt}.${dec}`
+}
 
 export function MoneyInput({
   value,
@@ -8,29 +30,31 @@ export function MoneyInput({
   placeholder = '0',
   autoFocus,
   id,
+  moneda = 'COP',
 }: {
-  /** Dígitos crudos, ej. "50000". */
+  /** Valor crudo, ej. "50000" (COP) o "1234.5" (USD). */
   value: string
-  onChange: (rawDigits: string) => void
+  onChange: (raw: string) => void
   placeholder?: string
   autoFocus?: boolean
   id?: string
+  moneda?: Moneda
 }) {
-  const formateado = value ? Number(value).toLocaleString('es-CO') : ''
+  const usd = moneda === 'USD'
   return (
     <div className="relative">
-      <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-gris">
-        $
+      <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-medium text-gris">
+        {usd ? 'US$' : '$'}
       </span>
       <input
         id={id}
         type="text"
-        inputMode="numeric"
+        inputMode={usd ? 'decimal' : 'numeric'}
         autoFocus={autoFocus}
         placeholder={placeholder}
-        value={formateado}
-        onChange={(e) => onChange(e.target.value.replace(/\D/g, ''))}
-        className="w-full rounded-xl border-[1.5px] border-linea bg-white py-3 pl-7 pr-3.5 text-base outline-none transition focus:border-verde-vivo focus:ring-4 focus:ring-verde-vivo/15"
+        value={formatearMonto(value, moneda)}
+        onChange={(e) => onChange(limpiarMonto(e.target.value.replace(/,/g, ''), moneda))}
+        className={`field pr-3.5 text-[18px] font-semibold ${usd ? 'pl-12' : 'pl-8'}`}
       />
     </div>
   )

@@ -58,7 +58,7 @@ export function GraficoFlujo({ datos }: { datos: PuntoFlujo[] }) {
                   title={`${d.etiqueta} · Gastos: ${fmt(d.gastos)}`}
                 />
               </div>
-              <span className="mt-1.5 text-center text-[10px] font-medium capitalize text-gris-claro">
+              <span className="mt-1.5 text-center text-[11px] font-medium capitalize text-gris">
                 {d.etiqueta}
               </span>
             </div>
