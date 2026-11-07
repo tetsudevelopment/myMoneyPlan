@@ -152,3 +152,8 @@ $$;
 grant execute on function public.crear_espacio(text)   to authenticated;
 grant execute on function public.unirse_a_espacio(text) to authenticated;
 grant execute on function public.es_miembro(uuid)       to authenticated;
+
+-- Postgres grants EXECUTE to PUBLIC by default: restrict the RPCs to signed-in users.
+revoke execute on function public.crear_espacio(text)    from public, anon;
+revoke execute on function public.unirse_a_espacio(text) from public, anon;
+revoke execute on function public.es_miembro(uuid)       from public, anon;
